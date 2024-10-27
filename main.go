@@ -13,10 +13,8 @@ import (
 
     "github.com/aws/aws-sdk-go-v2/aws"
     "github.com/aws/aws-sdk-go-v2/config"
-    "github.com/aws/aws-sdk-go-v2/credentials"
     "github.com/aws/aws-sdk-go-v2/service/ec2"
     "github.com/aws/aws-sdk-go-v2/service/s3"
-    "github.com/aws/aws-sdk-go-v2/service/sts"
     "github.com/jszwec/csvutil"
 )
 
@@ -49,7 +47,6 @@ type TemplateData struct {
 var (
     cfg                   aws.Config
     ec2Client             *ec2.Client
-    stsClient             *sts.Client
     instances             []EC2Instance
     tmpl                  *template.Template
     uniqueOwners          []string
@@ -67,9 +64,9 @@ func main() {
         log.Fatalf("unable to load SDK config, %v", err)
     }
 
-    // Create S3 and STS clients
+    // Create S3 and EC2 clients
     s3Client := s3.NewFromConfig(cfg)
-    stsClient = sts.NewFromConfig(cfg)
+    ec2Client = ec2.NewFromConfig(cfg)
 
     // Use your specified S3 bucket and CSV file key
     bucket := "ld-shared-prod-eu-west-2-ec2-inventory"
@@ -292,37 +289,11 @@ func restartHandler(w http.ResponseWriter, r *http.Request) {
             return
         }
 
-        // Map of "accountNumber|region" to list of instance IDs
-        accountInstances := make(map[string][]string)
-        for _, id := range selectedIDs {
-            // Find the instance in the list
-            var accountNumber string
-            var region string
-            for _, instance := range instances {
-                if instance.ID == id {
-                    accountNumber = instance.AWSAccountNumber
-                    region = instance.Region
-                    break
-                }
-            }
-            if accountNumber == "" {
-                fmt.Fprintf(w, "Instance ID %s not found in the data", id)
-                return
-            }
-            key := accountNumber + "|" + region
-            accountInstances[key] = append(accountInstances[key], id)
-        }
-
-        // Restart instances grouped by account and region
-        for key, instanceIDs := range accountInstances {
-            parts := strings.Split(key, "|")
-            accountNumber := parts[0]
-            region := parts[1]
-            err := restartInstances(accountNumber, region, instanceIDs)
-            if err != nil {
-                fmt.Fprintf(w, "Failed to restart instances in account %s: %v", accountNumber, err)
-                return
-            }
+        // Restart the instances
+        err := restartInstances(selectedIDs)
+        if err != nil {
+            fmt.Fprintf(w, "Failed to restart instances: %v", err)
+            return
         }
 
         fmt.Fprintf(w, "Successfully restarted instances: %v", selectedIDs)
@@ -331,40 +302,13 @@ func restartHandler(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-// restartInstances restarts the given EC2 instances in the specified account and region
-func restartInstances(accountNumber, region string, instanceIDs []string) error {
-    // Assume the terraform-admin role in the target account
-    roleArn := fmt.Sprintf("arn:aws:iam::%s:role/terraform-admin", accountNumber)
-    stsClient := sts.NewFromConfig(cfg)
-
-    assumeRoleOutput, err := stsClient.AssumeRole(context.Background(), &sts.AssumeRoleInput{
-        RoleArn:         aws.String(roleArn),
-        RoleSessionName: aws.String("InstanceRestartSession"),
-    })
-    if err != nil {
-        return fmt.Errorf("failed to assume role in account %s: %v", accountNumber, err)
-    }
-
-    // Create a new EC2 client with the assumed role credentials
-    creds := aws.NewCredentialsCache(
-        credentials.NewStaticCredentialsProvider(
-            *assumeRoleOutput.Credentials.AccessKeyId,
-            *assumeRoleOutput.Credentials.SecretAccessKey,
-            *assumeRoleOutput.Credentials.SessionToken,
-        ),
-    )
-
-    ec2Client := ec2.NewFromConfig(aws.Config{
-        Region:      region,
-        Credentials: creds,
-    })
-
-    // Restart the instances
+// restartInstances restarts the given EC2 instances
+func restartInstances(instanceIDs []string) error {
     input := &ec2.RebootInstancesInput{
         InstanceIds: instanceIDs,
     }
 
-    _, err = ec2Client.RebootInstances(context.Background(), input)
+    _, err := ec2Client.RebootInstances(context.Background(), input)
     if err != nil {
         return fmt.Errorf("failed to restart instances: %v", err)
     }
