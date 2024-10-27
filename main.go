@@ -371,7 +371,7 @@ func restartInstances(accountNumber, region string, instanceIDs []string) error 
     return nil
 }
 
-// HTML template for the webpage without the top navbar
+// HTML template for the webpage with the "Instance ID" field added
 const htmlTemplate = `
 <!DOCTYPE html>
 <html>
@@ -381,7 +381,7 @@ const htmlTemplate = `
     <link
         rel="stylesheet"
         href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
-        integrity="sha384-jcjb8FfFc67PDXgM3PyyFtZ+1ZmeZ0FbE7aYF0rZ5VYcQ6Z/XzplKd57V0eAd1Gz"
+        integrity="sha384-jcjb8FfFc67PDXgM3PyyFtZ+1ZmeZ0FbE7aYF0oZ5VYcQ6Z/XzplKd57V0eAd1Gz"
         crossorigin="anonymous"
     >
     <!-- Custom CSS -->
@@ -451,6 +451,7 @@ const htmlTemplate = `
                             </th>
                             <th scope="col">State</th>
                             <th scope="col">Name</th>
+                            <th scope="col">Instance ID</th>
                             <th scope="col">
                                 Service
                                 <select name="service" class="form-control" onchange="submitForm()">
@@ -488,6 +489,7 @@ const htmlTemplate = `
                             <td>{{.AWSAccountName}}</td>
                             <td>{{.State}}</td>
                             <td>{{.EC2Name}}</td>
+                            <td>{{.ID}}</td>
                             <td>{{.Service}}</td>
                             <td>{{.Owner}}</td>
                             <td>{{.Region}}</td>
@@ -495,7 +497,7 @@ const htmlTemplate = `
                         {{end}}
                         {{else}}
                         <tr>
-                            <td colspan="7" class="text-center">No instances found for the selected criteria.</td>
+                            <td colspan="8" class="text-center">No instances found for the selected criteria.</td>
                         </tr>
                         {{end}}
                     </tbody>
