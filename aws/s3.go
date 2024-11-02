@@ -5,7 +5,7 @@ import (
 	"context"
 	"io"
 	"log"
-
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -27,18 +27,23 @@ func SetupAWSClients() {
 }
 
 func GetCSVFromS3(bucket, key string) ([]byte, error) {
+	// Log the bucket and key being used
+	log.Printf("Attempting to retrieve object from S3 bucket: %s, key: %s", bucket, key)
+
 	output, err := S3Client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return nil, err
+		// Wrap the error with bucket and key information
+		return nil, fmt.Errorf("failed to get object from S3 bucket '%s' with key '%s': %w", bucket, key, err)
 	}
 	defer output.Body.Close()
 
 	content, err := io.ReadAll(output.Body)
 	if err != nil {
-		return nil, err
+		// Wrap the error with bucket and key information
+		return nil, fmt.Errorf("failed to read object body from S3 bucket '%s' with key '%s': %w", bucket, key, err)
 	}
 	return content, nil
 }

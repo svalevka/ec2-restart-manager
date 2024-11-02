@@ -6,16 +6,30 @@ import (
 	"ec2-restart-manager/aws"
 	"ec2-restart-manager/models"
 	"ec2-restart-manager/utils"
+	"ec2-restart-manager/config"
 	"html/template"
 	"log"
 )
 
 var tmpl = template.Must(template.ParseFiles("templates/index.html"))
 
+// Global variable to hold the configuration
+var cfg *config.Config
+
+// Initialize configuration when the package is loaded
+func init() {
+    var err error
+    cfg, err = config.LoadConfig()
+    if err != nil {
+        log.Fatalf("Error loading configuration: %v", err)
+    }
+}
+
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch CSV from S3
-	bucket := "inventory-copper-test"
-	key := "ec2_inventory-current.csv"
+	
+    bucket := cfg.S3.Bucket
+    key := cfg.S3.Key
 
 	csvContent, err := aws.GetCSVFromS3(bucket, key)
 	if err != nil {

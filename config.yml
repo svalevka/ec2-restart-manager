@@ -1,0 +1,5 @@
+---
+
+s3:
+  bucket: "inventory-copper-test"
+  key: "ec2_inventory-current.csv"
