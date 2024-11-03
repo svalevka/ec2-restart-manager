@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,14 +19,14 @@ var groupID string
 
 // InitializeAuth sets up the OAuth configuration using the loaded config.
 func InitializeAuth(cfg *config.Config) {
-    groupID = cfg.AzureAD.GroupID
-    oauthConfig = &oauth2.Config{
-        ClientID:     cfg.AzureAD.ClientID,
-        ClientSecret: os.Getenv("AZURE_AD_CLIENT_SECRET"), // Ensure this is set as an environment variable
-        RedirectURL:  cfg.AzureAD.RedirectURL,
-        Endpoint:     microsoft.AzureADEndpoint(cfg.AzureAD.TenantID),
-        Scopes:       []string{"openid", "profile", "User.Read", "GroupMember.Read.All"},
-    }
+	groupID = cfg.AzureAD.GroupID
+	oauthConfig = &oauth2.Config{
+		ClientID:     cfg.AzureAD.ClientID,
+		ClientSecret: os.Getenv("AZURE_AD_CLIENT_SECRET"), // Ensure this is set as an environment variable
+		RedirectURL:  cfg.AzureAD.RedirectURL,
+		Endpoint:     microsoft.AzureADEndpoint(cfg.AzureAD.TenantID),
+		Scopes:       []string{"openid", "profile", "User.Read", "GroupMember.Read.All"},
+	}
 }
 
 // AuthMiddleware ensures that requests are authenticated.
@@ -36,7 +37,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			if debug {
 				fmt.Println("Token not found or invalid, redirecting to login")
 			}
-			
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
@@ -81,6 +81,13 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if the user is a member of the specified group
+	if !isUserInGroup(token) {
+		http.Error(w, "Access Denied: User is not a member of the required group", http.StatusForbidden)
+		return
+	}
+
+	// Store the access token in a secure cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    token.AccessToken,
@@ -91,4 +98,35 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// isUserInGroup checks if the user is a member of the specified AD group.
+func isUserInGroup(token *oauth2.Token) bool {
+	client := oauthConfig.Client(context.Background(), token)
+	resp, err := client.Get("https://graph.microsoft.com/v1.0/me/memberOf")
+	if err != nil {
+		fmt.Printf("Failed to fetch group memberships: %v\n", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	var groups struct {
+		Value []struct {
+			ID string `json:"id"`
+		} `json:"value"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+		fmt.Printf("Failed to decode group memberships response: %v\n", err)
+		return false
+	}
+
+	// Check if the user is a member of the specified group
+	for _, group := range groups.Value {
+		if group.ID == groupID {
+			return true
+		}
+	}
+
+	return false
 }
