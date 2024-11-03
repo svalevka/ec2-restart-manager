@@ -1,15 +1,11 @@
-## S3
-```
-cd .
-go mod init  ec2-restart-manager
-export GOSUMDB=sum.golang.org
-export GOPROXY=https://proxy.golang.org,direct
+## Description
 
-
-go get github.com/aws/aws-sdk-go-v2/aws
-go get github.com/aws/aws-sdk-go-v2/config
-go get github.com/aws/aws-sdk-go-v2/service/s3
-```
+Web application for restarting EC2 instances from all accounts and regions.
+This application does following:
+* Authenticate user using Entra and authorize only users from specific User Group
+* Connect to S3 bucket in  `shared-prod` account and retrieve inventory EC2 data from CSV file stored in that bucket. 
+* Present Webpage with filtering options to select subset of EC2 instances for specific region, account and Owner.
+* Restart selected EC2 instances.
 
 ## Docker
 
