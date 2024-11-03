@@ -27,3 +27,5 @@ export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 go run main.go
 ```
+
+![Image](./images/instance_manager.png)
