@@ -23,9 +23,11 @@ Provide Azure client secret as env var
 export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 
-# Start app
+## Start app
 ```
 go run main.go
 ```
+
+## GUI
 
 ![Image](./images/instance_manager.png)
