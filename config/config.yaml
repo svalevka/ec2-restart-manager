@@ -1,0 +1,14 @@
+---
+
+s3:
+  bucket: "ld-shared-prod-eu-west-2-ec2-inventory"
+  bucket_prod: "ld-shared-prod-eu-west-2-ec2-inventory"
+  bucket_dev:  "inventory-copper-test"
+  key: "ec2_inventory-current.csv"
+
+
+azure_ad:
+  tenant_id: "2d928bec-d52d-4de8-8c6c-adad5cc349c0"
+  client_id: "8925e8f2-71cc-4f8b-b191-12fd6b3dcbd5"
+  redirect_url: "http://localhost:8080/auth/callback"
+  group_id: "0f8a09e7-e8ab-457d-bd18-3fe73e2b7bb7"
