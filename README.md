@@ -95,6 +95,11 @@ Provide Azure client secret as env var
 export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 
+## Permissions
+App needs to be run with AWS permissions to 
+* Read S3 inventory bucket in 'config/config.yml'
+* Assume IAM role 'ec2 restart role' in each AWS account. This role must already exist
+
 ## Start app
 ```
 go run main.go
