@@ -19,6 +19,8 @@ docker build -t ec2-restart-manager:${TAG} .
 
 ## Authentication
 
+### Create Azure app
+
 1. Sign in to the Azure Portal
 Go to Azure Portal and sign in with your Azure account.
 
@@ -82,6 +84,11 @@ Go to Azure Portal and sign in with your Azure account.
 
     Save your changes.
 
+### Create Azure Group
+
+Create azure group i.e. EC2-Restart-Manager and take note of its id
+
+### Save secret as env var
 
 Provide Azure client secret as env var
 ```
