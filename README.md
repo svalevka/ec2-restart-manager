@@ -19,6 +19,9 @@ Build image
 export TAG="1.0"
 export IMAGE="ec2-restart-manager"
 docker build -t ec2-restart-manager:${TAG} .
+```
 
-
+# Start app
+```
+go run main.go
 ```
