@@ -27,8 +27,6 @@ func SetupAWSClients() {
 }
 
 func GetCSVFromS3(bucket, key string) ([]byte, error) {
-	// Log the bucket and key being used
-	log.Printf("Attempting to retrieve object from S3 bucket: %s, key: %s", bucket, key)
 
 	output, err := S3Client.GetObject(context.Background(), &s3.GetObjectInput{
 		Bucket: aws.String(bucket),

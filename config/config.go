@@ -12,6 +12,12 @@ type Config struct {
         Bucket string `yaml:"bucket"`
         Key    string `yaml:"key"`
     } `yaml:"s3"`
+    AzureAD struct {
+        TenantID    string `yaml:"tenant_id"`
+        ClientID    string `yaml:"client_id"`
+        RedirectURL string `yaml:"redirect_url"`
+        GroupID     string `yaml:"group_id"`
+    } `yaml:"azure_ad"`
 }
 
 func LoadConfig() (*Config, error) {
