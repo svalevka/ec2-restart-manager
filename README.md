@@ -21,6 +21,12 @@ export IMAGE="ec2-restart-manager"
 docker build -t ec2-restart-manager:${TAG} .
 ```
 
+## Authentication
+Provide Azure client secret as env var
+```
+export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+```
+
 # Start app
 ```
 go run main.go
