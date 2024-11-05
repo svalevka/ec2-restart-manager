@@ -16,14 +16,30 @@ var (
 )
 
 // SetupAWSClients initializes the AWS SDK configuration and sets up clients.
-func SetupAWSClients() {
-	cfg, err := config.LoadDefaultConfig(context.Background())
-	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
-	}
+// func SetupAWSClients() {
+// 	cfg, err := config.LoadDefaultConfig(context.Background())
+// 	if err != nil {
+// 		log.Fatalf("unable to load SDK config, %v", err)
+// 	}
+// 	// awsCfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(cfg.Region))
 
-	// Initialize the S3 client
-	S3Client = s3.NewFromConfig(cfg)
+//     if err != nil {
+//         log.Fatalf("unable to load SDK config, %v", err)
+//     }	
+// 	// Initialize the S3 client
+// 	S3Client = s3.NewFromConfig(awsCfg)
+// }
+
+func SetupAWSClients() {
+    cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("eu-west-2"))
+    if err != nil {
+        log.Fatalf("unable to load SDK config, %v", err)
+    }
+
+	log.Printf("Region being used: %s", cfg.Region)
+
+    // Initialize the S3 client
+    S3Client = s3.NewFromConfig(cfg)
 }
 
 func GetCSVFromS3(bucket, key string) ([]byte, error) {

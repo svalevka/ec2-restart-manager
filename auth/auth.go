@@ -35,7 +35,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		cookie, err := r.Cookie("access_token")
 		if err != nil || cookie.Value == "" {
 			if utils.Debug {
-				fmt.Println("Token not found or invalid, redirecting to login")
+				fmt.Println("Token not found or invalid, redirecting to login!")
 			}
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
@@ -83,6 +83,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Output the group IDs to the console
 	if utils.Debug {
+		fmt.Println("User is a member of the following groups:")
 		outputUserGroups(token)	
 	}	
 
@@ -106,31 +107,43 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // isUserInGroup checks if the user is a member of the specified AD group.
+// isUserInGroup checks if the user is a member of the specified AD group.
 func isUserInGroup(token *oauth2.Token) bool {
 	client := oauthConfig.Client(context.Background(), token)
-	resp, err := client.Get("https://graph.microsoft.com/v1.0/me/memberOf")
-	if err != nil {
-		fmt.Printf("Failed to fetch group memberships: %v\n", err)
-		return false
-	}
-	defer resp.Body.Close()
+	url := "https://graph.microsoft.com/v1.0/me/memberOf"
 
-	var groups struct {
-		Value []struct {
-			ID string `json:"id"`
-		} `json:"value"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
-		fmt.Printf("Failed to decode group memberships response: %v\n", err)
-		return false
-	}
-
-	// Check if the user is a member of the specified group
-	for _, group := range groups.Value {
-		if group.ID == groupID {
-			return true
+	for {
+		resp, err := client.Get(url)
+		if err != nil {
+			fmt.Printf("Failed to fetch group memberships: %v\n", err)
+			return false
 		}
+		defer resp.Body.Close()
+
+		var groups struct {
+			Value []struct {
+				ID string `json:"id"`
+			} `json:"value"`
+			NextLink string `json:"@odata.nextLink"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+			fmt.Printf("Failed to decode group memberships response: %v\n", err)
+			return false
+		}
+
+		// Check if the user is a member of the specified group
+		for _, group := range groups.Value {
+			if group.ID == groupID {
+				return true
+			}
+		}
+
+		// If there's a next link, continue fetching the next page
+		if groups.NextLink == "" {
+			break
+		}
+		url = groups.NextLink
 	}
 
 	return false
@@ -138,29 +151,42 @@ func isUserInGroup(token *oauth2.Token) bool {
 
 
 // outputUserGroups outputs the list of group IDs the user is a member of to the console.
+// outputUserGroups outputs the list of group IDs the user is a member of to the console.
 func outputUserGroups(token *oauth2.Token) {
 	client := oauthConfig.Client(context.Background(), token)
-	resp, err := client.Get("https://graph.microsoft.com/v1.0/me/memberOf")
-	if err != nil {
-		fmt.Printf("Failed to fetch group memberships: %v\n", err)
-		return
-	}
-	defer resp.Body.Close()
+	url := "https://graph.microsoft.com/v1.0/me/memberOf"
 
-	var groups struct {
-		Value []struct {
-			ID string `json:"id"`
-		} `json:"value"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
-		fmt.Printf("Failed to decode group memberships response: %v\n", err)
-		return
-	}
-
-	// Output the group IDs to the console
 	fmt.Println("User is a member of the following groups:")
-	for _, group := range groups.Value {
-		fmt.Printf("Group ID: %s\n", group.ID)
+
+	for {
+		resp, err := client.Get(url)
+		if err != nil {
+			fmt.Printf("Failed to fetch group memberships: %v\n", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		var groups struct {
+			Value []struct {
+				ID string `json:"id"`
+			} `json:"value"`
+			NextLink string `json:"@odata.nextLink"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+			fmt.Printf("Failed to decode group memberships response: %v\n", err)
+			return
+		}
+
+		// Output the group IDs to the console
+		for _, group := range groups.Value {
+			fmt.Printf("Group ID: %s\n", group.ID)
+		}
+
+		// If there's a next link, continue fetching the next page
+		if groups.NextLink == "" {
+			break
+		}
+		url = groups.NextLink
 	}
 }
