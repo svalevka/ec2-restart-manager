@@ -10,9 +10,9 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/microsoft"
 	"ec2-restart-manager/config"
+	"ec2-restart-manager/utils"
 )
 
-var debug = false
 
 var oauthConfig *oauth2.Config
 var groupID string
@@ -34,7 +34,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("access_token")
 		if err != nil || cookie.Value == "" {
-			if debug {
+			if utils.Debug {
 				fmt.Println("Token not found or invalid, redirecting to login")
 			}
 			http.Redirect(w, r, "/login", http.StatusFound)
@@ -80,6 +80,11 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Output the group IDs to the console
+	if utils.Debug {
+		outputUserGroups(token)	
+	}	
 
 	// Check if the user is a member of the specified group
 	if !isUserInGroup(token) {
@@ -129,4 +134,33 @@ func isUserInGroup(token *oauth2.Token) bool {
 	}
 
 	return false
+}
+
+
+// outputUserGroups outputs the list of group IDs the user is a member of to the console.
+func outputUserGroups(token *oauth2.Token) {
+	client := oauthConfig.Client(context.Background(), token)
+	resp, err := client.Get("https://graph.microsoft.com/v1.0/me/memberOf")
+	if err != nil {
+		fmt.Printf("Failed to fetch group memberships: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var groups struct {
+		Value []struct {
+			ID string `json:"id"`
+		} `json:"value"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+		fmt.Printf("Failed to decode group memberships response: %v\n", err)
+		return
+	}
+
+	// Output the group IDs to the console
+	fmt.Println("User is a member of the following groups:")
+	for _, group := range groups.Value {
+		fmt.Printf("Group ID: %s\n", group.ID)
+	}
 }
