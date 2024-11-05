@@ -10,9 +10,9 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/microsoft"
 	"ec2-restart-manager/config"
+	"ec2-restart-manager/utils"
 )
 
-var debug = false
 
 var oauthConfig *oauth2.Config
 var groupID string
@@ -34,8 +34,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("access_token")
 		if err != nil || cookie.Value == "" {
-			if debug {
-				fmt.Println("Token not found or invalid, redirecting to login")
+			if utils.Debug {
+				fmt.Println("Token not found or invalid, redirecting to login!")
 			}
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
@@ -81,6 +81,12 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Output the group IDs to the console
+	if utils.Debug {
+		fmt.Println("User is a member of the following groups:")
+		outputUserGroups(token)	
+	}	
+
 	// Check if the user is a member of the specified group
 	if !isUserInGroup(token) {
 		http.Error(w, "Access Denied: User is not a member of the required group", http.StatusForbidden)
@@ -101,32 +107,86 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // isUserInGroup checks if the user is a member of the specified AD group.
+// isUserInGroup checks if the user is a member of the specified AD group.
 func isUserInGroup(token *oauth2.Token) bool {
 	client := oauthConfig.Client(context.Background(), token)
-	resp, err := client.Get("https://graph.microsoft.com/v1.0/me/memberOf")
-	if err != nil {
-		fmt.Printf("Failed to fetch group memberships: %v\n", err)
-		return false
-	}
-	defer resp.Body.Close()
+	url := "https://graph.microsoft.com/v1.0/me/memberOf"
 
-	var groups struct {
-		Value []struct {
-			ID string `json:"id"`
-		} `json:"value"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
-		fmt.Printf("Failed to decode group memberships response: %v\n", err)
-		return false
-	}
-
-	// Check if the user is a member of the specified group
-	for _, group := range groups.Value {
-		if group.ID == groupID {
-			return true
+	for {
+		resp, err := client.Get(url)
+		if err != nil {
+			fmt.Printf("Failed to fetch group memberships: %v\n", err)
+			return false
 		}
+		defer resp.Body.Close()
+
+		var groups struct {
+			Value []struct {
+				ID string `json:"id"`
+			} `json:"value"`
+			NextLink string `json:"@odata.nextLink"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+			fmt.Printf("Failed to decode group memberships response: %v\n", err)
+			return false
+		}
+
+		// Check if the user is a member of the specified group
+		for _, group := range groups.Value {
+			if group.ID == groupID {
+				return true
+			}
+		}
+
+		// If there's a next link, continue fetching the next page
+		if groups.NextLink == "" {
+			break
+		}
+		url = groups.NextLink
 	}
 
 	return false
+}
+
+
+// outputUserGroups outputs the list of group IDs the user is a member of to the console.
+// outputUserGroups outputs the list of group IDs the user is a member of to the console.
+func outputUserGroups(token *oauth2.Token) {
+	client := oauthConfig.Client(context.Background(), token)
+	url := "https://graph.microsoft.com/v1.0/me/memberOf"
+
+	fmt.Println("User is a member of the following groups:")
+
+	for {
+		resp, err := client.Get(url)
+		if err != nil {
+			fmt.Printf("Failed to fetch group memberships: %v\n", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		var groups struct {
+			Value []struct {
+				ID string `json:"id"`
+			} `json:"value"`
+			NextLink string `json:"@odata.nextLink"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&groups); err != nil {
+			fmt.Printf("Failed to decode group memberships response: %v\n", err)
+			return
+		}
+
+		// Output the group IDs to the console
+		for _, group := range groups.Value {
+			fmt.Printf("Group ID: %s\n", group.ID)
+		}
+
+		// If there's a next link, continue fetching the next page
+		if groups.NextLink == "" {
+			break
+		}
+		url = groups.NextLink
+	}
 }

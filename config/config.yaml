@@ -9,3 +9,5 @@ azure_ad:
   client_id: "a9a6fab8-df34-4589-8df5-0c68e7199ca5"
   redirect_url: "https://ec2-restart-manager.prod.ld.internal/auth/callback"
   group_id: "e0841785-e652-4a73-a748-f185a8a57a7a"
+
+region: "eu-west-2"

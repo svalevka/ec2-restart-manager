@@ -18,6 +18,8 @@ type Config struct {
         RedirectURL string `yaml:"redirect_url"`
         GroupID     string `yaml:"group_id"`
     } `yaml:"azure_ad"`
+    Region string `yaml:"region"`
+
 }
 
 func LoadConfig() (*Config, error) {
