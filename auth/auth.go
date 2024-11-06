@@ -18,7 +18,7 @@ var oauthConfig *oauth2.Config
 var groupID string
 
 // InitializeAuth sets up the OAuth configuration using the loaded config.
-func InitializeAuth(cfg *config.Config) {
+func InitializeAuth(cfg *config.EnvConfig) {
 	groupID = cfg.AzureAD.GroupID
 	oauthConfig = &oauth2.Config{
 		ClientID:     cfg.AzureAD.ClientID,
@@ -107,7 +107,6 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // isUserInGroup checks if the user is a member of the specified AD group.
-// isUserInGroup checks if the user is a member of the specified AD group.
 func isUserInGroup(token *oauth2.Token) bool {
 	client := oauthConfig.Client(context.Background(), token)
 	url := "https://graph.microsoft.com/v1.0/me/memberOf"
@@ -150,7 +149,7 @@ func isUserInGroup(token *oauth2.Token) bool {
 }
 
 
-// outputUserGroups outputs the list of group IDs the user is a member of to the console.
+
 // outputUserGroups outputs the list of group IDs the user is a member of to the console.
 func outputUserGroups(token *oauth2.Token) {
 	client := oauthConfig.Client(context.Background(), token)
