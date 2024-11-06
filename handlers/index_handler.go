@@ -14,7 +14,7 @@ import (
 var tmpl = template.Must(template.ParseFiles("templates/index.html"))
 
 // Global variable to hold the configuration
-var cfg *config.Config
+var cfg *config.EnvConfig
 
 // Initialize configuration when the package is loaded
 func init() {
