@@ -101,6 +101,23 @@ Provide Azure client secret as env var
 export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 
+###  Login and Logout
+
+1. Track Active Sessions on the Server:
+
+Use a unique session ID (e.g., a UUID) stored in the access_token cookie to identify sessions.
+On login, generate a session ID, store it in the cookie, and also store it in your server-side session store.
+
+2. Modify AuthMiddleware to Check Session Validity:
+
+When a request comes in, read the session ID from the cookie and verify it against the session store.
+If the session is invalid or doesn’t exist, redirect the user to the login page.
+
+3. Invalidate the Session on Logout:
+
+In the LogoutHandler, instead of setting a Set-Cookie header to delete the cookie, remove the session from the session store. This invalidates the session on the server, making the cookie useless even if it remains in the browser.
+
+
 ## Permissions
 App needs to be run with AWS permissions to 
 * Read S3 inventory bucket in 'config/config.yml'
