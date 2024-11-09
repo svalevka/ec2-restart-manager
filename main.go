@@ -35,12 +35,6 @@ func main() {
 		fmt.Println("Config:", string(configJSON))
 	}
 
-	// Fetch the CSV file from S3
-	file, err := aws.GetCSVFromS3("ld-shared-dev-eu-west-2-questdb-backups", "test.csv")
-	if err != nil {
-		log.Fatalf("Failed to get CSV file from S3: %v", err)
-	}
-	fmt.Println(string(file))
 
 	// Load the Azure app secret into the environment if the config environment is 'test'
 	if cfg.Environment == "test" {
