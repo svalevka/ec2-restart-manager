@@ -57,6 +57,7 @@ func main() {
 	http.Handle("/restart", auth.AuthMiddleware(http.HandlerFunc(handlers.RestartHandler))) // Restrict restart to logged-in 
 	http.HandleFunc("/about", handlers.AboutHandler)
 	http.HandleFunc("/logout", auth.LogoutHandler)
+	http.HandleFunc("/access_denied", handlers.AccessDeniedHandler)
 
 	http.HandleFunc("/login", auth.LoginHandler)
 	http.HandleFunc("/auth/callback", auth.CallbackHandler)

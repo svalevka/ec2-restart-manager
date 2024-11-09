@@ -1,3 +1,4 @@
+{{define "layout"}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,32 +10,23 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand bg-dark">
         <a class="navbar-brand text-white" href="/">EC2 Manager</a>
-        <div class="d-flex justify-content-start">
-            <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link text-white" href="/">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white" href="/about">About</a>
-                </li>
-                {{ if .IsLoggedIn }}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="/logout">Logout</a>
-                    </li>
-                {{ else }}
-                    <li class="nav-item">
-                        <a class="nav-link text-white" href="/login">Login</a>
-                    </li>
-                {{ end }}
-            </ul>
-        </div>
-        
+        <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link text-white" href="/">Home</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/about">About</a></li>
+            {{ if .IsLoggedIn }}
+                <li class="nav-item"><a class="nav-link text-white" href="/logout">Logout</a></li>
+            {{ else if .AzureAuthenticated }}
+                <li class="nav-item"><a class="nav-link text-white" href="/logout">Logout</a></li>
+            {{ else }}
+                <li class="nav-item"><a class="nav-link text-white" href="/login">Login</a></li>
+            {{ end }}
+        </ul>
+
+        <!-- Show username on the right if logged in -->
         {{ if .IsLoggedIn }}
-            <!-- Place username on the right side -->
-            <span class="navbar-text text-white ml-auto">{{ .UserName }}</span>
+            <span class="navbar-text text-white ml-auto">{{.UserName}}</span>
         {{ end }}
     </nav>
-    
 
     <!-- Page Content -->
     <div class="container mt-4">
@@ -42,3 +34,4 @@
     </div>
 </body>
 </html>
+{{end}}

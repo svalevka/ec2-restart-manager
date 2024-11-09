@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+
 	"ec2-restart-manager/config"
 	"ec2-restart-manager/utils"
 
@@ -102,6 +103,13 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	token, err := oauthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+    // **Check if the user is in the required group**
+	if !isUserInGroup(token) {
+		// Redirect to access denied page
+		http.Redirect(w, r, "/access_denied", http.StatusFound)
 		return
 	}
 
@@ -225,4 +233,15 @@ func outputUserGroups(token *oauth2.Token) {
 		}
 		url = groups.NextLink
 	}
+}
+
+
+func IsUserLoggedIn(r *http.Request) bool {
+    cookie, err := r.Cookie("session_id")
+    if err != nil {
+        return false // No session cookie found
+    }
+    sessionID := cookie.Value
+    _, loggedIn := SessionStore[sessionID] // Check if session ID exists in the store
+    return loggedIn
 }

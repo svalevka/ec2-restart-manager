@@ -26,6 +26,7 @@ type TemplateData struct {
 	SelectedRegion         string
 	IsLoggedIn			   bool
 	UserName 			   string	
+	AzureAuthenticated	   bool
 }
 
 // Example of TemplateData struct:
