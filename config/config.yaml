@@ -5,10 +5,10 @@ env:
       bucket: "ld-shared-prod-eu-west-2-ec2-inventory"
       key: "ec2_inventory-current.csv"
     azure_ad:
-      tenant_id: "2d928bec-d52d-4de8-8c6c-adad5cc349c0"
-      client_id: "8925e8f2-71cc-4f8b-b191-12fd6b3dcbd5"
+      tenant_id: "a7bbe832-532a-4d60-930a-c47c8840745e"
+      client_id: "a9a6fab8-df34-4589-8df5-0c68e7199ca5"
       redirect_url: "https://ec2-restart-manager.prod.ld.internal/auth/callback"
-      group_id: "e0841785-e652-4a73-a748-f185a8a57a7a"
+      group_id: "e0841785-e652-4a73-a748-f185a8a57a7a" # SG-APP-EC2-restart-manager
     region: "eu-west-2"
 
   dev:
@@ -19,7 +19,7 @@ env:
       tenant_id: "4d75b307-b56f-431e-be51-4c022677a1f2"
       client_id: "a7bbe832-532a-4d60-930a-c47c8840745e"
       redirect_url: "https://ec2-restart-manager.dev.ld.internal/auth/callback"
-      group_id: "e0841785-e652-4a73-a748-f185a8a57a7a"
+      group_id: "e0841785-e652-4a73-a748-f185a8a57a7a" # SG-APP-EC2-restart-manager
     region: "eu-west-2"
 
   test:
@@ -30,7 +30,7 @@ env:
       tenant_id: "a7bbe832-532a-4d60-930a-c47c8840745e"
       client_id: "14e1a65a-80b9-4ef4-808b-5e0609765156"
       redirect_url: "http://localhost:8080/auth/callback"
-      group_id: "e0841785-e652-4a73-a748-f185a8a57a7a"
+      group_id: "e0841785-e652-4a73-a748-f185a8a57a7a" # SG-APP-EC2-restart-manager
     region: "eu-west-2"
 
   # test:
