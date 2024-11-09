@@ -14,6 +14,7 @@ type EC2Instance struct {
 }
 
 type TemplateData struct {
+	Title				  string
 	Instances              []EC2Instance
 	UniqueOwners           []string
 	SelectedOwner          string
@@ -23,6 +24,8 @@ type TemplateData struct {
 	SelectedAWSAccountName string
 	UniqueRegions          []string
 	SelectedRegion         string
+	IsLoggedIn			   bool
+	UserName 			   string	
 }
 
 // Example of TemplateData struct:

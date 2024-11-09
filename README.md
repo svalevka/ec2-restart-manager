@@ -7,6 +7,16 @@ This application does following:
 * Present Webpage with filtering options to select subset of EC2 instances for specific region, account and Owner.
 * Restart selected EC2 instances.
 
+## Configuration
+
+Configuration file is stored in `config/config.yml`
+Example of using configuration in code: 
+```
+bucket := cfg.S3.Bucket
+key := cfg.S3.Key
+
+```
+
 ## Docker
 
 Build image
@@ -101,6 +111,43 @@ Provide Azure client secret as env var
 export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ```
 
+
+### **Login Flow**
+
+   - **Login Initiation**:
+     - When an unauthenticated user tries to access a protected route, they’re redirected to the `/login` endpoint.
+     - The `LoginHandler` then redirects them to the Azure AD login page, passing along the necessary OAuth2 parameters, including the client ID, redirect URI, and scopes.
+
+   - **Authentication with Azure AD**:
+     - The user authenticates with Azure AD, which issues an authorization code.
+     - Azure AD then redirects the user back to the application’s `/callback` endpoint with this code.
+
+   - **Exchange Authorization Code for Access Token**:
+     - The `CallbackHandler` receives the authorization code and exchanges it with Azure AD for an access token.
+     - This token is used to retrieve the user’s profile information from Microsoft Graph, particularly their display name.
+
+   - **Create Session and Set Cookie**:
+     - A unique session ID is generated for the user, and this session ID, along with the user's display name, is stored in the server-side `SessionStore`.
+     - A `session_id` cookie is then set in the user’s browser, containing the session ID, and the user is redirected to the application’s root URL.
+
+   - **Middleware Verification**:
+     - For each subsequent request, the `AuthMiddleware` checks the `session_id` cookie in the request and verifies that this session ID exists in `SessionStore`.
+     - If valid, the request proceeds; otherwise, the user is redirected back to the `/login` endpoint.
+
+### **Logout Flow**
+
+   - **Logout Handler**:
+     - When the user clicks the “Logout” button, they are redirected to the `/logout` endpoint, which is handled by `LogoutHandler`.
+   
+   - **Session Invalidation**:
+     - The `LogoutHandler` removes the user’s session from `SessionStore`, effectively invalidating the session on the server side.
+     - The `session_id` cookie in the browser is also cleared by setting its `Max-Age` to `-1` and `Expires` to a past date.
+
+   - **Azure AD Logout**:
+     - To fully log the user out, including from Azure AD, the `LogoutHandler` redirects the user to Azure AD’s logout URL.
+     - The logout URL includes a `post_logout_redirect_uri` parameter that points to the root URL of the application (dynamically generated based on the request’s `Host` header).
+     - After Azure AD clears its session, it redirects the user back to the application’s root URL, where they are now logged out.
+
 ## Permissions
 App needs to be run with AWS permissions to 
 * Read S3 inventory bucket in 'config/config.yml'
@@ -111,7 +158,19 @@ App needs to be run with AWS permissions to
 go run main.go
 ```
 
-## GUI
+## Development
 
-![Image](./images/instance_manager.png)
+Proposed development cycle:
+* Run code in your workstation as below:
+    * Ensure your workstaion has access to list S3 bucket defined in config file
+    * Ensure your workstaion has access to AWS Secrets manager value for secret `platform/ec2-restart-manager` in `shared-dev` AWS account
+    * Opet terminal and run  `go run main.go`
+    * Open browser page on `http://localhost:8080`  
+* Run code in `shared-dev` account in EKS
+    * Build and push Docker image as per `./deploy.sh`
+    * Update Docker image tag in corresponding Helm template `ec2-restart-manager` in Platform team EKS namespace in `shared-dev` account
+* Promote code to `shared-prod` account in EKS.
+    * Repeat the same as above for `shared-prod` account
+
+Three distinct Azure AD apps created to ensure callback addresses are used for each scenario above. See `config/config.yml` for details.
 

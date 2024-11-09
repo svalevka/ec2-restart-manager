@@ -53,8 +53,11 @@ func main() {
 	auth.InitializeAuth(cfg)
 
 	// Apply authMiddleware to protected routes
-	http.Handle("/", auth.AuthMiddleware(http.HandlerFunc(handlers.IndexHandler)))
-	http.Handle("/restart", auth.AuthMiddleware(http.HandlerFunc(handlers.RestartHandler)))
+	http.HandleFunc("/", handlers.IndexHandler) // Allow public access to the index
+	http.Handle("/restart", auth.AuthMiddleware(http.HandlerFunc(handlers.RestartHandler))) // Restrict restart to logged-in 
+	http.HandleFunc("/about", handlers.AboutHandler)
+	http.HandleFunc("/logout", auth.LogoutHandler)
+
 	http.HandleFunc("/login", auth.LoginHandler)
 	http.HandleFunc("/auth/callback", auth.CallbackHandler)
 
