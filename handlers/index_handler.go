@@ -106,7 +106,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     // Render layout.html with index.html as the content
-    if err := indexTemplate.ExecuteTemplate(w, "layout.html", data); err != nil {
+    if err := indexTemplate.ExecuteTemplate(w, "layout", data); err != nil {
         http.Error(w, "Failed to render template", http.StatusInternalServerError)
         log.Printf("Error rendering index template: %v", err)
     }
