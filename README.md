@@ -103,40 +103,50 @@ export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 ###  Login and Logout
 
-1. Login Flow
-Login Initiation:
 
-When an unauthenticated user tries to access a protected route, they’re redirected to the /login endpoint.
-The LoginHandler then redirects them to the Azure AD login page, passing along the necessary OAuth2 parameters, including the client ID, redirect URI, and scopes.
-Authentication with Azure AD:
 
-The user authenticates with Azure AD, which issues an authorization code.
-Azure AD then redirects the user back to the application’s /callback endpoint with this code.
-Exchange Authorization Code for Access Token:
+### 1. **Login Flow**
 
-The CallbackHandler receives the authorization code and exchanges it with Azure AD for an access token.
-This token is used to retrieve the user’s profile information from Microsoft Graph, particularly their display name.
-Create Session and Set Cookie:
+   - **Login Initiation**:
+     - When an unauthenticated user tries to access a protected route, they’re redirected to the `/login` endpoint.
+     - The `LoginHandler` then redirects them to the Azure AD login page, passing along the necessary OAuth2 parameters, including the client ID, redirect URI, and scopes.
 
-A unique session ID is generated for the user, and this session ID, along with the user's display name, is stored in the server-side SessionStore.
-A session_id cookie is then set in the user’s browser, containing the session ID, and the user is redirected to the application’s root URL.
-Middleware Verification:
+   - **Authentication with Azure AD**:
+     - The user authenticates with Azure AD, which issues an authorization code.
+     - Azure AD then redirects the user back to the application’s `/callback` endpoint with this code.
 
-For each subsequent request, the AuthMiddleware checks the session_id cookie in the request and verifies that this session ID exists in SessionStore.
-If valid, the request proceeds; otherwise, the user is redirected back to the /login endpoint.
-2. Logout Flow
-Logout Handler:
+   - **Exchange Authorization Code for Access Token**:
+     - The `CallbackHandler` receives the authorization code and exchanges it with Azure AD for an access token.
+     - This token is used to retrieve the user’s profile information from Microsoft Graph, particularly their display name.
 
-When the user clicks the “Logout” button, they are redirected to the /logout endpoint, which is handled by LogoutHandler.
-Session Invalidation:
+   - **Create Session and Set Cookie**:
+     - A unique session ID is generated for the user, and this session ID, along with the user's display name, is stored in the server-side `SessionStore`.
+     - A `session_id` cookie is then set in the user’s browser, containing the session ID, and the user is redirected to the application’s root URL.
 
-The LogoutHandler removes the user’s session from SessionStore, effectively invalidating the session on the server side.
-The session_id cookie in the browser is also cleared by setting its Max-Age to -1 and Expires to a past date.
-Azure AD Logout:
+   - **Middleware Verification**:
+     - For each subsequent request, the `AuthMiddleware` checks the `session_id` cookie in the request and verifies that this session ID exists in `SessionStore`.
+     - If valid, the request proceeds; otherwise, the user is redirected back to the `/login` endpoint.
 
-To fully log the user out, including from Azure AD, the LogoutHandler redirects the user to Azure AD’s logout URL.
-The logout URL includes a post_logout_redirect_uri parameter that points to the root URL of the application (dynamically generated based on the request’s Host header).
-After Azure AD clears its session, it redirects the user back to the application’s root URL, where they are now logged out.
+### 2. **Logout Flow**
+
+   - **Logout Handler**:
+     - When the user clicks the “Logout” button, they are redirected to the `/logout` endpoint, which is handled by `LogoutHandler`.
+   
+   - **Session Invalidation**:
+     - The `LogoutHandler` removes the user’s session from `SessionStore`, effectively invalidating the session on the server side.
+     - The `session_id` cookie in the browser is also cleared by setting its `Max-Age` to `-1` and `Expires` to a past date.
+
+   - **Azure AD Logout**:
+     - To fully log the user out, including from Azure AD, the `LogoutHandler` redirects the user to Azure AD’s logout URL.
+     - The logout URL includes a `post_logout_redirect_uri` parameter that points to the root URL of the application (dynamically generated based on the request’s `Host` header).
+     - After Azure AD clears its session, it redirects the user back to the application’s root URL, where they are now logged out.
+
+### Summary
+
+- **Login**: Azure AD authentication establishes a session ID stored server-side, with a `session_id` cookie used to track the session client-side.
+- **Logout**: Both the server-side session and Azure AD session are cleared, ensuring the user must fully reauthenticate to log back in.
+
+
 
 
 ## Permissions
