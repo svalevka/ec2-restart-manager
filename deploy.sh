@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export TAG="1.4"
+export TAG="1.2.1"
 export IMAGE="ec2-restart-manager"
 export REPO='platform'
 export REGION='eu-west-2'

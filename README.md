@@ -166,12 +166,15 @@ Proposed development cycle:
     * Ensure your AWS profile is for `shared-dev` account, i.e. `export AWS_DEFAULT_PROFILE=shared-dev.SharedDevAdministrators`
     * Ensure your workstaion has access to AWS Secrets manager value for secret `platform/ec2-restart-manager` in `shared-dev` AWS account
     * Opet terminal and run  `go run main.go`
-    * Open browser page on `http://localhost:8080`  
+      * If you need debug output in console, set env var `export DEBUG=true` before strarting the app
+    * Open browser page on http://localhost:8080  
 * Run code in `shared-dev` account in EKS
     * Build and push Docker image as per `./deploy.sh`
     * Update Docker image tag in corresponding Helm template `ec2-restart-manager` in Platform team EKS namespace in `shared-dev` account
+    * Open browser on https://ec2-restart-manager.dev.ld.internal
 * Promote code to `shared-prod` account in EKS.
     * Repeat the same as above for `shared-prod` account
+    * Open browser on https://ec2-restart-manager.prod.ld.internal
 
 Three distinct Azure AD apps created to ensure callback addresses are used for each scenario above. See `config/config.yml` for details.
 
