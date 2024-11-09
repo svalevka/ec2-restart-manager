@@ -32,3 +32,14 @@ env:
       redirect_url: "http://localhost:8080/auth/callback"
       group_id: "e0841785-e652-4a73-a748-f185a8a57a7a"
     region: "eu-west-2"
+
+  # test:
+  #   s3:
+  #     bucket: "inventory-copper-test"
+  #     key: "ec2_inventory-current.csv"
+  #   azure_ad:
+  #     tenant_id: "2d928bec-d52d-4de8-8c6c-adad5cc349c0"
+  #     client_id: "8925e8f2-71cc-4f8b-b191-12fd6b3dcbd5"
+  #     redirect_url: "http://localhost:8080/auth/callback"
+  #     group_id: "0f8a09e7-e8ab-457d-bd18-3fe73e2b7bb7"
+  #   region: "eu-west-2"

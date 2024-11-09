@@ -4,15 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"time"
 
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/microsoft"
+
 	"ec2-restart-manager/config"
 	"ec2-restart-manager/utils"
-)
 
+	"github.com/google/uuid"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/microsoft"
+)
 
 var oauthConfig *oauth2.Config
 var groupID string
@@ -29,80 +33,123 @@ func InitializeAuth(cfg *config.EnvConfig) {
 	}
 }
 
-// AuthMiddleware ensures that requests are authenticated.
+// Session store for server-side session management (maps session ID to user name)
+var SessionStore = make(map[string]string)
+
+func PrintSessionStore() {
+    log.Println("Current SessionStore contents:")
+    for sessionID, userName := range SessionStore {
+        log.Printf("SessionID: %s, UserName: %s\n", sessionID, userName)
+    }
+}
+
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("access_token")
-		if err != nil || cookie.Value == "" {
-			if utils.Debug {
-				fmt.Println("Token not found or invalid, redirecting to login!")
-			}
+		cookie, err := r.Cookie("session_id")
+		if err != nil || cookie.Value == "" || SessionStore[cookie.Value] == "" {
+			// Redirect to login if the session ID is missing or invalid
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
 
-		// Create an OAuth2 token object with the value from the cookie
-		token := &oauth2.Token{
-			AccessToken: cookie.Value,
-			TokenType:   "Bearer",
-		}
-
-		// Validate the token by making a request to the API
-		client := oauthConfig.Client(context.Background(), token)
-		resp, err := client.Get("https://graph.microsoft.com/v1.0/me")
-		if err != nil || resp.StatusCode != http.StatusOK {
-			fmt.Printf("Token validation failed or token expired: %v\n", err)
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-
-		defer resp.Body.Close()
-		next.ServeHTTP(w, r) // Call the next handler in the chain if authentication is successful
+		// If the session is valid, proceed to the next handler
+		next.ServeHTTP(w, r)
 	})
 }
 
-// LoginHandler redirects users to the Azure login page.
+
+// LoginHandler redirects users to the Azure AD login page.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	url := oauthConfig.AuthCodeURL("state", oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusFound)
 }
 
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+    // Delete the session from SessionStore
+    if cookie, err := r.Cookie("session_id"); err == nil {
+        delete(SessionStore, cookie.Value)
+    }
+
+    // Clear the session_id cookie
+    http.SetCookie(w, &http.Cookie{
+        Name:     "session_id",
+        Value:    "",
+        Path:     "/",
+        MaxAge:   -1,
+        Expires:  time.Unix(0, 0),
+        HttpOnly: true,
+        Secure:   false,
+    })
+
+	// Use the current request host to build the redirect URL
+	redirectURL := fmt.Sprintf("http://%s", r.Host)
+
+    // Redirect to Azure AD logout URL
+    azureLogoutURL := "https://login.microsoftonline.com/common/oauth2/logout"
+    http.Redirect(w, r, fmt.Sprintf("%s?post_logout_redirect_uri=%s", azureLogoutURL, redirectURL), http.StatusFound)
+}
+
+
 // CallbackHandler handles the callback from Azure after authentication.
 func CallbackHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the authorization code from query parameters
 	code := r.URL.Query().Get("code")
 	if code == "" {
 		http.Error(w, "Code not found", http.StatusBadRequest)
 		return
 	}
 
+	// Exchange the code for an access token
 	token, err := oauthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		http.Error(w, "Failed to exchange token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Output the group IDs to the console
-	if utils.Debug {
-		fmt.Println("User is a member of the following groups:")
-		outputUserGroups(token)	
-	}	
-
-	// Check if the user is a member of the specified group
+    // **Check if the user is in the required group**
 	if !isUserInGroup(token) {
-		http.Error(w, "Access Denied: User is not a member of the required group", http.StatusForbidden)
+		// Redirect to access denied page
+		http.Redirect(w, r, "/access_denied", http.StatusFound)
 		return
 	}
 
-	// Store the access token in a secure cookie
+	// Use the access token to fetch user profile info from Microsoft Graph
+	client := oauthConfig.Client(context.Background(), token)
+	userInfo, err := client.Get("https://graph.microsoft.com/v1.0/me")
+	if err != nil || userInfo.StatusCode != http.StatusOK {
+		http.Error(w, "Failed to fetch user info", http.StatusInternalServerError)
+		return
+	}
+	defer userInfo.Body.Close()
+
+	// Decode the user info to get the display name
+	var profile struct {
+		DisplayName string `json:"displayName"`
+	}
+	if err := json.NewDecoder(userInfo.Body).Decode(&profile); err != nil {
+		http.Error(w, "Failed to decode user info", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate a unique session ID and store it with the user's display name
+	sessionID := uuid.NewString()
+	SessionStore[sessionID] = profile.DisplayName
+
+	if utils.Debug {	
+		PrintSessionStore()
+	}
+
+	// Set the session ID in a secure cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
-		Value:    token.AccessToken,
+		Name:     "session_id",
+		Value:    sessionID,
 		Path:     "/",
-		Expires:  token.Expiry,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production to ensure it's only sent over HTTPS
+		Secure:   false, // Set to true in production for HTTPS
+		Expires:  token.Expiry,
 	})
 
+	// Redirect the user to the home page or dashboard
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -148,8 +195,6 @@ func isUserInGroup(token *oauth2.Token) bool {
 	return false
 }
 
-
-
 // outputUserGroups outputs the list of group IDs the user is a member of to the console.
 func outputUserGroups(token *oauth2.Token) {
 	client := oauthConfig.Client(context.Background(), token)
@@ -188,4 +233,15 @@ func outputUserGroups(token *oauth2.Token) {
 		}
 		url = groups.NextLink
 	}
+}
+
+
+func IsUserLoggedIn(r *http.Request) bool {
+    cookie, err := r.Cookie("session_id")
+    if err != nil {
+        return false // No session cookie found
+    }
+    sessionID := cookie.Value
+    _, loggedIn := SessionStore[sessionID] // Check if session ID exists in the store
+    return loggedIn
 }
