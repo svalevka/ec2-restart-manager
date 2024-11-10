@@ -1,9 +1,14 @@
 // models/ec2_instance.go
 package models
 
+import (
+	"fmt"
+)
+
+
 type EC2Instance struct {
 	AWSAccountName   string `csv:"AWS Account Name"`
-	AWSAccountNumber string `csv:"AWS Account Number"`
+	AWSAccountNumber string `csv:"AWS Account ID"`
 	State            string `csv:"State"`
 	EC2Name          string `csv:"EC2 Name"`
 	Service          string `csv:"Service"`
@@ -27,34 +32,25 @@ type TemplateData struct {
 	IsLoggedIn			   bool
 	UserName 			   string	
 	AzureAuthenticated	   bool
+	StatusMap              map[string]string 
 }
 
-// Example of TemplateData struct:
+// Global cache to store EC2 instances by their ID
+var instanceCache = make(map[string]EC2Instance)
 
-// data := models.TemplateData{
-//     Instances: instances,
-//     UniqueOwners: []string{
-//         "Alice",
-//         "Bob",
-//         "Charlie",
-//     },
-//     SelectedOwner: "", // No owner selected
-//     UniqueServices: []string{
-//         "Caching Service",
-//         "Database Service",
-//         "Web Service",
-//     },
-//     SelectedService: "", // No service selected
-//     UniqueAWSAccountNames: []string{
-//         "DevAccount",
-//         "ProdAccount",
-//         "TestAccount",
-//     },
-//     SelectedAWSAccountName: "", // No AWS account name selected
-//     UniqueRegions: []string{
-//         "eu-central-1",
-//         "us-east-1",
-//         "us-west-2",
-//     },
-//     SelectedRegion: "", // No region selected
-// }
+// LoadInstances populates the instance cache from a slice of EC2Instance structs
+func LoadInstances(instances []EC2Instance) {
+	for _, instance := range instances {
+		instanceCache[instance.ID] = instance
+	}
+}
+
+// GetInstanceDetails retrieves the details of an EC2 instance by its ID
+func GetInstanceDetails(instanceID string) (*EC2Instance, error) {
+	instance, exists := instanceCache[instanceID]
+	if !exists {
+		return nil, fmt.Errorf("instance ID %s not found", instanceID)
+	}
+	return &instance, nil
+}
+

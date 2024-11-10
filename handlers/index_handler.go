@@ -48,6 +48,9 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Load parsed instances into global cache
+    models.LoadInstances(instances)
+
     // Extract unique values for filters
     uniqueOwners := utils.GetUniqueOwners(instances)
     uniqueServices := utils.GetUniqueServices(instances)
