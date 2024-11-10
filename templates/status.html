@@ -1,0 +1,25 @@
+{{ define "content" }}
+<div class="container mt-4">
+    <h2>Instance Restart Status</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Instance ID</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $id, $status := .StatusMap}}
+            <tr>
+                <td>{{ $id }}</td>
+                <td>{{ $status }}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="2" class="text-center">No instance statuses available.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{ end }}
