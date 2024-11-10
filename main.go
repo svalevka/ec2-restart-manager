@@ -61,6 +61,8 @@ func main() {
 
 	http.HandleFunc("/login", auth.LoginHandler)
 	http.HandleFunc("/auth/callback", auth.CallbackHandler)
+	http.HandleFunc("/status", handlers.StatusHandler)
+
 
 	// Start the web server
 	address := "0.0.0.0:8080"
