@@ -101,3 +101,4 @@ func GetStatusMap() map[string]string {
     }
     return copyMap
 }
+
