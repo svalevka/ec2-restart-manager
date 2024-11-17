@@ -34,6 +34,7 @@ func RestartHandler(w http.ResponseWriter, r *http.Request) {
         instance, err := models.GetInstanceDetails(instanceID)
         if err != nil {
             log.Printf("Error fetching instance details for %s: %v", instanceID, err)
+            updateStatus(instanceID, "Failed to fetch instance details")
             continue
         }
 
@@ -41,6 +42,7 @@ func RestartHandler(w http.ResponseWriter, r *http.Request) {
         assumedConfig, err := aws.AssumeRoleInAccount(instance.AWSAccountNumber)
         if err != nil {
             log.Printf("Error assuming role in account %s for instance %s: %v", instance.AWSAccountNumber, instanceID, err)
+            updateStatus(instanceID, "Failed to assume role in account")
             continue
         }
 
@@ -48,6 +50,7 @@ func RestartHandler(w http.ResponseWriter, r *http.Request) {
         fmt.Println("Confirming assumed role identity:")
         if err := aws.GetCallerIdentity(assumedConfig); err != nil {
             log.Printf("Failed to confirm assumed role identity: %v", err)
+            updateStatus(instanceID, "Failed to confirm assumed role identity")
             continue
         }
 
@@ -55,6 +58,7 @@ func RestartHandler(w http.ResponseWriter, r *http.Request) {
         ec2Client, err := aws.NewEC2Client(assumedConfig, instance.Region)
         if err != nil {
             log.Printf("Error creating EC2 client in region %s for instance %s: %v", instance.Region, instanceID, err)
+            updateStatus(instanceID, "Failed to create EC2 client")
             continue
         }
 
@@ -68,11 +72,32 @@ func RestartHandler(w http.ResponseWriter, r *http.Request) {
         err = aws.RestartEC2Instance(ec2Client, instanceID)
         if err != nil {
             log.Printf("Failed to restart instance %s: %v", instanceID, err)
+            updateStatus(instanceID, "Failed to restart instance")
         } else {
             log.Printf("Successfully restarted instance %s in region %s", instanceID, instance.Region)
+            updateStatus(instanceID, "Success")
         }
     }
 
     // Redirect to /status page after the restart process
     http.Redirect(w, r, "/status", http.StatusSeeOther)
+}
+
+// updateStatus safely updates the statusMap for a specific instance ID
+func updateStatus(instanceID, status string) {
+    statusLock.Lock()
+    defer statusLock.Unlock()
+    statusMap[instanceID] = status
+}
+
+// GetStatusMap provides a thread-safe way to access the statusMap
+func GetStatusMap() map[string]string {
+    statusLock.Lock()
+    defer statusLock.Unlock()
+    // Create a copy to avoid concurrent modification issues
+    copyMap := make(map[string]string)
+    for k, v := range statusMap {
+        copyMap[k] = v
+    }
+    return copyMap
 }
