@@ -22,6 +22,11 @@
             {{ else }}
                 <li class="nav-item"><a class="nav-link text-white" href="/login">Login</a></li>
             {{ end }}
+            <li class="nav-item">
+                <form action="/update" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-link nav-link text-white">Update</button>
+                </form>
+            </li>
         </ul>
 
         <!-- Show username on the right if logged in -->
