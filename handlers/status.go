@@ -3,10 +3,10 @@ package handlers
 import (
     "html/template"
     "net/http"
+    "log"
 
     "ec2-restart-manager/models"
     "ec2-restart-manager/auth"
-    "log"
 )
 
 // StatusHandler renders the status page, showing the status of each instance restart
@@ -18,15 +18,16 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 
     // Map instance statuses to EC2Instance objects for rendering
     var instancesWithStatus []models.EC2Instance
-    for id, status := range currentStatusMap {
+    for id, instanceStatus := range currentStatusMap {
         instance, err := models.GetInstanceDetails(id)
         if err != nil {
             log.Printf("Error retrieving instance details for ID %s: %v", id, err)
             continue
         }
 
-        // Add status to the instance details
-        instance.State = status // Reusing the `State` field to store status temporarily
+        // Add status and timestamp to the instance details
+        instance.State = instanceStatus.Status               // Assign the status
+        instance.RestartTimestamp = instanceStatus.Timestamp // Assign the timestamp
         instancesWithStatus = append(instancesWithStatus, *instance)
     }
 
@@ -35,7 +36,6 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
         Title:     "Instance Restart Status",
         IsLoggedIn: isLoggedIn,
         Instances: instancesWithStatus, // Use the Instances field to pass instance data
-        StatusMap: currentStatusMap,    // Retain the StatusMap for potential debugging
     }
 
     // Load and parse the templates

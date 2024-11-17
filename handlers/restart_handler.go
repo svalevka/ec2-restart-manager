@@ -5,6 +5,8 @@ import (
     "log"
     "net/http"
     "sync"
+    "time"
+
     "ec2-restart-manager/aws"
     "ec2-restart-manager/models"
 )
@@ -12,8 +14,14 @@ import (
 // Mutex to handle concurrent access to the status map
 var statusLock sync.Mutex
 
+// Struct to store the status and timestamp of each instance restart operation
+type InstanceStatus struct {
+    Status    string // e.g., "Success" or "Failed"
+    Timestamp string // ISO 8601 format timestamp
+}
+
 // Map to store the status of each instance restart operation
-var statusMap = make(map[string]string)
+var statusMap = make(map[string]InstanceStatus)
 
 // RestartHandler handles the request to restart EC2 instances in multiple accounts/regions
 func RestartHandler(w http.ResponseWriter, r *http.Request) {
@@ -87,18 +95,20 @@ func RestartHandler(w http.ResponseWriter, r *http.Request) {
 func updateStatus(instanceID, status string) {
     statusLock.Lock()
     defer statusLock.Unlock()
-    statusMap[instanceID] = status
+    statusMap[instanceID] = InstanceStatus{
+        Status:    status,
+        Timestamp: time.Now().Format(time.RFC3339), // ISO 8601 timestamp
+    }
 }
 
 // GetStatusMap provides a thread-safe way to access the statusMap
-func GetStatusMap() map[string]string {
+func GetStatusMap() map[string]InstanceStatus {
     statusLock.Lock()
     defer statusLock.Unlock()
     // Create a copy to avoid concurrent modification issues
-    copyMap := make(map[string]string)
+    copyMap := make(map[string]InstanceStatus)
     for k, v := range statusMap {
         copyMap[k] = v
     }
     return copyMap
 }
-

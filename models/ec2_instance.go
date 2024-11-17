@@ -15,6 +15,7 @@ type EC2Instance struct {
 	Owner            string `csv:"Owner"`
 	ID               string `csv:"ID"`
 	Region           string `csv:"Region"`
+	RestartTimestamp string 
 	// Add other fields as needed
 }
 
