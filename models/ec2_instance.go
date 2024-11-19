@@ -15,6 +15,7 @@ type EC2Instance struct {
 	Owner            string `csv:"Owner"`
 	ID               string `csv:"ID"`
 	Region           string `csv:"Region"`
+	RestartTimestamp string 
 	// Add other fields as needed
 }
 
@@ -53,4 +54,14 @@ func GetInstanceDetails(instanceID string) (*EC2Instance, error) {
 	}
 	return &instance, nil
 }
+
+// GetInstances retrieves all EC2 instances from the global instance cache
+func GetInstances() []EC2Instance {
+	instances := make([]EC2Instance, 0, len(instanceCache))
+	for _, instance := range instanceCache {
+		instances = append(instances, instance)
+	}
+	return instances
+}
+
 

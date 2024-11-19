@@ -19,7 +19,7 @@ key := cfg.S3.Key
 
 ## Docker
 
-Build image
+Check 
 
 ```
 export TAG="1.0"
