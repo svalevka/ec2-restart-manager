@@ -16,8 +16,8 @@ env:
       bucket: "ld-shared-dev-eu-west-2-ec2-inventory"
       key: "ec2_inventory-current.csv"
     azure_ad:
-      tenant_id: "4d75b307-b56f-431e-be51-4c022677a1f2"
-      client_id: "a7bbe832-532a-4d60-930a-c47c8840745e"
+      tenant_id: "a7bbe832-532a-4d60-930a-c47c8840745e"
+      client_id: "4d75b307-b56f-431e-be51-4c022677a1f2"
       redirect_url: "https://ec2-restart-manager.dev.ld.internal/auth/callback"
       group_id: "e0841785-e652-4a73-a748-f185a8a57a7a" # SG-APP-EC2-restart-manager
     region: "eu-west-2"

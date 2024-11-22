@@ -153,14 +153,20 @@ App needs to be run with AWS permissions to
 * Read S3 inventory bucket in 'config/config.yml'
 * Assume IAM role 'ec2 restart role' in each AWS account. This role must already exist
 
-## Start app
-```
-go run main.go
-```
+## IAM Permissions
+Application runs in shared-${env} account in EKS using appropriate Service Account role defined in eks terragrunt configuration
+In each AWS Account, dedicated IAM Role 'ec2-restart-manager' is created.
+This role can be assumed by the app cross account. This role also has permissions to restart EC2 instances.
 
 ## Development
 
-Proposed development cycle:
+The app can be ran using few methods, depending on where in development cycle you are:
+* Run go code directly using your development server
+* Run it as a container in dev EKS cluster
+* Run it as a container in Prod EKS cluster
+
+Example development cycle:
+
 * Run code in your workstation as below:
     * Ensure your workstaion has access to list S3 bucket defined in config file
     * Ensure your AWS profile is for `shared-dev` account, i.e. `export AWS_DEFAULT_PROFILE=shared-dev.SharedDevAdministrators`
