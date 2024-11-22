@@ -24,9 +24,9 @@ func InitAWSConfig() error {
     return nil
 }
 
-func AssumeRoleInAccount(accountID string) (aws.Config, error) {
+func AssumeRoleInAccount(role_name string, accountID string) (aws.Config, error) {
     // Define the role ARN based on the account ID and the role name
-    roleArn := fmt.Sprintf("arn:aws:iam::%s:role/ec2-restart-manager", accountID)
+    roleArn := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, role_name)
 
     // Create an STS client using the global AWS configuration
     stsClient := sts.NewFromConfig(AWSConfig)

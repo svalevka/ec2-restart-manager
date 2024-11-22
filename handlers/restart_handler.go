@@ -11,6 +11,8 @@ import (
     "ec2-restart-manager/models"
 )
 
+var restarter_role_name = "ec2-restart-manager-restarter"
+
 // Mutex to handle concurrent access to the status map
 var statusLock sync.Mutex
 
@@ -47,7 +49,7 @@ func RestartHandler(w http.ResponseWriter, r *http.Request) {
         }
 
         // Assume the role in the target AWS account and get the AWS Config
-        assumedConfig, err := aws.AssumeRoleInAccount(instance.AWSAccountNumber)
+        assumedConfig, err := aws.AssumeRoleInAccount(restarter_role_name, instance.AWSAccountNumber)
         if err != nil {
             log.Printf("Error assuming role in account %s for instance %s: %v", instance.AWSAccountNumber, instanceID, err)
             updateStatus(instanceID, "Failed to assume role in account")
