@@ -7,6 +7,11 @@ This application does following:
 * Present Webpage with filtering options to select subset of EC2 instances for specific region, account and Owner.
 * Restart selected EC2 instances.
 
+URLs:
+* Dev:  https://ec2-restart-manager.dev.ld.internal
+* Prod: https://ec2-restart-manager.prod.ld.internal
+* Local: http://localhost:8080
+
 ## Configuration
 
 Configuration file is stored in `config/config.yml`
@@ -19,19 +24,8 @@ key := cfg.S3.Key
 
 ## Docker
 
-Check 
+Use [deploy.sh](./deploy.sh) script for an example
 
-```
-export TAG="1.0"
-export IMAGE="ec2-restart-manager"
-export REPO='platform'
-export REGION='eu-west-2'
-docker build -t ec2-restart-manager:${TAG} .
-export ECR_ACCOUNT_ID='120161110524'
-aws ecr get-login-password   --region ${REGION} | docker login --username AWS --password-stdin  ${ECR_ACCOUNT_ID}.dkr.ecr.eu-west-2.amazonaws.com
-docker tag ${IMAGE}:${TAG} ${ECR_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}/${IMAGE}:${TAG}
-docker push  ${ECR_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}/${IMAGE}:${TAG}
-```
 
 ## Authentication
 
@@ -151,19 +145,22 @@ export AZURE_AD_CLIENT_SECRET="XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 ## Permissions
 App needs to be run with AWS permissions to 
 * Read S3 inventory bucket in 'config/config.yml'
-* Assume IAM role 'ec2 restart role' in each AWS account. This role must already exist
+* Assume IAM role 'ec2-restart-manager-restarter' in each AWS account. This role must already exist
 
 ## IAM Permissions
 Application runs in shared-${env} account in EKS using appropriate Service Account role defined in eks terragrunt configuration
-In each AWS Account, dedicated IAM Role 'ec2-restart-manager' is created.
+In each AWS Account, dedicated IAM Role 'ec2-restart-manager-restarter' is created.
 This role can be assumed by the app cross account. This role also has permissions to restart EC2 instances.
 
 ## Development
 
 The app can be ran using few methods, depending on where in development cycle you are:
 * Run go code directly using your development server
+  * Application has access to dev accounts only
 * Run it as a container in dev EKS cluster
+  * Application has access to dev accounts only
 * Run it as a container in Prod EKS cluster
+  * Application has access to all accounts
 
 Example development cycle:
 
