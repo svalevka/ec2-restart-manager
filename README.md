@@ -22,6 +22,13 @@ key := cfg.S3.Key
 
 ```
 
+## Versioning
+Versioning is based on latest git tag found in the repo.
+To run app using custom version number: 
+```
+go run  -ldflags="-X ec2-restart-manager/config.Version=v1.2.3" main.go
+```
+
 ## Docker
 
 Use [deploy.sh](./deploy.sh) script for an example
