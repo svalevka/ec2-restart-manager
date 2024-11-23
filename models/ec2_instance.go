@@ -20,7 +20,8 @@ type EC2Instance struct {
 }
 
 type TemplateData struct {
-	Title				  string
+	Title				   string
+	Version 			   string
 	Instances              []EC2Instance
 	UniqueOwners           []string
 	SelectedOwner          string

@@ -81,6 +81,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	// Prepare data to pass to the template
 	data := models.TemplateData{
 		Title:                 "EC2 Instance Manager",
+		Version:			   config.Version,
 		Instances:             filteredInstances,
 		UniqueOwners:          uniqueOwners,
 		SelectedOwner:         selectedOwner,

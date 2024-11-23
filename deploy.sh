@@ -1,10 +1,21 @@
 #!/bin/bash
 
-export TAG="1.5.1"
+export TAG="1.5.3"
 export IMAGE="ec2-restart-manager"
 export REPO='platform'
 export REGION='eu-west-2'
-docker build -t ec2-restart-manager:${TAG} .
+
+git tag v${TAG} -m "Release ${TAG}"
+git push --tags
+# Ensure the tag exists
+if [ -z "${TAG}" ]; then
+    echo "Error: No Git tag found. Please create a tag before deploying."
+    exit 1
+fi
+echo "Building version ${TAG}..."
+
+# Build the Docker image with the Git tag as the version
+docker build --build-arg VERSION=v${TAG} -t ${IMAGE}:${TAG} .
 
 # deploy to production
 export ECR_ACCOUNT_ID='120161110524'
