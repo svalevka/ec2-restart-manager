@@ -5,6 +5,7 @@ import (
     "net/http"
     "ec2-restart-manager/auth"
     "ec2-restart-manager/models"
+    "ec2-restart-manager/config"
 	"log"
 )
 
@@ -16,6 +17,7 @@ func AboutHandler(w http.ResponseWriter, r *http.Request) {
     // Prepare the template data
     data := models.TemplateData{
         Title:             "About",
+        Version:           config.Version,
         IsLoggedIn:        isLoggedIn,
         AzureAuthenticated: false,
     }
