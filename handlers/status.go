@@ -7,6 +7,7 @@ import (
 
     "ec2-restart-manager/models"
     "ec2-restart-manager/auth"
+    "ec2-restart-manager/config"
 )
 
 // StatusHandler renders the status page, showing the status of each instance restart
@@ -36,6 +37,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
         Title:     "Instance Restart Status",
         IsLoggedIn: isLoggedIn,
         Instances: instancesWithStatus, // Use the Instances field to pass instance data
+        Version:  config.Version,
     }
 
     // Load and parse the templates

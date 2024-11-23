@@ -33,12 +33,14 @@
         {{ if .IsLoggedIn }}
             <span class="navbar-text text-white ml-auto">{{.UserName}}</span>
         {{ end }}
+            <span class="navbar-text text-white ml-auto">{{.Version}}</span>
     </nav>
 
     <!-- Page Content -->
     <div class="container mt-4">
         {{template "content" .}}
     </div>
+
 </body>
 </html>
 {{end}}

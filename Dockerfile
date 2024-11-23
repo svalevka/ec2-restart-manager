@@ -11,7 +11,8 @@ COPY . .
 RUN go mod download
 
 # Build the Go app
-RUN go build -o ec2-restart-manager .
+ARG VERSION="unknown"
+RUN go build -ldflags="-X ec2-restart-manager/config.Version=${VERSION}" -o ec2-restart-manager .
 
 # Expose port 8080 to the outside world
 EXPOSE 8080

@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 	"ec2-restart-manager/models"
+	"ec2-restart-manager/config"
 )
 
 // AccessDeniedHandler handles scenarios where the user is authenticated with Azure
@@ -15,6 +16,7 @@ func AccessDeniedHandler(w http.ResponseWriter, r *http.Request) {
 		IsLoggedIn:        false,                 // User is not logged into the app
 		AzureAuthenticated: true,                 // User is authenticated with Azure
 		UserName:          "",                    // Optionally, set a display name if available
+		Version: 		 config.Version,        // Application version
 	}
 
 	// Load and parse the templates
