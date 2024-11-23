@@ -1,0 +1,53 @@
+# Binaries and executables
+/ec2-restart-manager
+
+# Build artifacts
+*.exe
+*.out
+*.o
+*.so
+
+# Go modules
+/go.sum
+/go.mod
+
+# Dependency directories
+vendor/
+/bin/
+/pkg/
+
+# Temporary files and logs
+*.log
+*.tmp
+*.swp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE files
+.idea/
+.vscode/
+*.iml
+
+# Docker files
+*.tar
+.env
+
+# S3 keys or sensitive files (if any)
+/keys/
+/config/
+
+# Test results
+*.test
+coverage.out
+
+# Node.js files (if you use any front-end assets in this repo)
+node_modules/
+/dist/
+/yarn.lock
+package-lock.json
+
+# Ignore the .terraform directory if using Terraform with this project
+.terraform/
+.terraform.lock.hcl
