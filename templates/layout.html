@@ -29,11 +29,13 @@
             </li>
         </ul>
 
-        <!-- Show username on the right if logged in -->
-        {{ if .IsLoggedIn }}
-            <span class="navbar-text text-white ml-auto">{{.UserName}}</span>
-        {{ end }}
-            <span class="navbar-text text-white ml-auto">{{.Version}}</span>
+        <!-- Show username and version on the right -->
+        <div class="ml-auto d-flex align-items-center">
+            {{ if .IsLoggedIn }}
+                <span class="navbar-text text-white mr-3">{{.UserName}}</span>
+            {{ end }}
+            <span class="navbar-text text-white">{{.Version}}</span>
+        </div>
     </nav>
 
     <!-- Page Content -->
