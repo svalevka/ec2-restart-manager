@@ -1,7 +1,7 @@
 {{ define "content" }}
 <div class="container mt-4">
 
-    <!-- Filter Form (separate from Restart Form) -->
+    <!-- Filter Form -->
     <form method="POST" action="/" id="filterForm">
         <div class="form-row">
             <div class="form-group col-md-3">
@@ -45,17 +45,18 @@
 
     <!-- Form to Select Instances and Restart -->
     <form method="POST" action="/restart">
-        <table class="table table-striped">
+        <table class="table table-striped" id="instanceTable">
             <thead>
                 <tr>
                     <th>Select</th>
-                    <th>AWS Account Name</th>
-                    <th>State</th>
-                    <th>Name</th>
-                    <th>Instance ID</th>
-                    <th>Service</th>
-                    <th>Owner</th>
-                    <th>Region</th>
+                    <th data-sort="AWSAccountName">AWS Account Name</th>
+                    <th data-sort="State">State</th>
+                    <th data-sort="UptimeDays">Uptime Days</th>
+                    <th data-sort="EC2Name">Name</th>
+                    <th data-sort="ID">Instance ID</th>
+                    <th data-sort="Service">Service</th>
+                    <th data-sort="Owner">Owner</th>
+                    <th data-sort="Region">Region</th>
                 </tr>
             </thead>
             <tbody>
@@ -65,6 +66,7 @@
                     <td><input type="checkbox" name="instance_ids" value="{{.ID}}"></td>
                     <td>{{.AWSAccountName}}</td>
                     <td>{{.State}}</td>
+                    <td>{{.UptimeDays}}</td>
                     <td>{{.EC2Name}}</td>
                     <td>{{.ID}}</td>
                     <td>{{.Service}}</td>
@@ -74,7 +76,7 @@
                 {{end}}
                 {{else}}
                 <tr>
-                    <td colspan="8" class="text-center">No instances found for the selected criteria.</td>
+                    <td colspan="9" class="text-center">No instances found for the selected criteria.</td>
                 </tr>
                 {{end}}
             </tbody>
@@ -90,8 +92,39 @@
 
 <!-- Optional JavaScript -->
 <script>
+    // Submit form when a filter dropdown is changed
     function submitForm() {
         document.getElementById('filterForm').submit();
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const table = document.getElementById('instanceTable');
+        const headers = table.querySelectorAll('th[data-sort]');
+        let sortOrder = 1; // 1 for ascending, -1 for descending
+
+        headers.forEach(header => {
+            header.addEventListener('click', function () {
+                const fieldIndex = this.cellIndex;
+                const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => row.querySelector('td'));
+                
+                rows.sort((a, b) => {
+                    const aText = a.cells[fieldIndex].textContent.trim();
+                    const bText = b.cells[fieldIndex].textContent.trim();
+
+                    if (!isNaN(aText) && !isNaN(bText)) {
+                        return sortOrder * (parseFloat(aText) - parseFloat(bText));
+                    }
+                    return sortOrder * aText.localeCompare(bText);
+                });
+
+                // Append sorted rows back to tbody
+                const tbody = table.querySelector('tbody');
+                rows.forEach(row => tbody.appendChild(row));
+
+                // Toggle sorting order
+                sortOrder *= -1;
+            });
+        });
+    });
 </script>
 {{ end }}

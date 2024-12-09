@@ -10,6 +10,7 @@ type EC2Instance struct {
 	AWSAccountName   string `csv:"AWS Account Name"`
 	AWSAccountNumber string `csv:"AWS Account ID"`
 	State            string `csv:"State"`
+	UptimeDays  	 string `csv:"Uptime Days"`
 	EC2Name          string `csv:"EC2 Name"`
 	Service          string `csv:"Service"`
 	Owner            string `csv:"Owner"`
