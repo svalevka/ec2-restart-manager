@@ -1,0 +1,77 @@
+<!-- templates/command.html -->
+{{ define "content" }}
+<div class="container mt-4">
+    <h2>Execute Commands on Instances</h2>
+    
+    <!-- Instance Selection Form -->
+    <form method="POST" action="/command" id="commandForm">
+        <div class="form-group">
+            <label for="command_type">Command Type:</label>
+            <select name="command_type" id="command_type" class="form-control" onchange="toggleCustomCommand()">
+                <option value="patching">Security Patching</option>
+                <option value="custom">Custom Command</option>
+            </select>
+        </div>
+        
+        <div class="form-group" id="custom_command_div" style="display: none;">
+            <label for="custom_command">Custom Command:</label>
+            <textarea name="custom_command" id="custom_command" class="form-control" rows="3" placeholder="Enter your command here..."></textarea>
+            <small class="form-text text-muted">Be careful with custom commands. They will run with root privileges.</small>
+        </div>
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>AWS Account Name</th>
+                    <th>State</th>
+                    <th>Name</th>
+                    <th>Instance ID</th>
+                    <th>Service</th>
+                    <th>Owner</th>
+                    <th>Region</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{if .Instances}}
+                {{range .Instances}}
+                <tr>
+                    <td><input type="checkbox" name="instance_ids" value="{{.ID}}"></td>
+                    <td>{{.AWSAccountName}}</td>
+                    <td>{{.State}}</td>
+                    <td>{{.EC2Name}}</td>
+                    <td>{{.ID}}</td>
+                    <td>{{.Service}}</td>
+                    <td>{{.Owner}}</td>
+                    <td>{{.Region}}</td>
+                </tr>
+                {{end}}
+                {{else}}
+                <tr>
+                    <td colspan="8" class="text-center">No instances found for the selected criteria.</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+
+        {{ if .IsLoggedIn }}
+            <button type="submit" class="btn btn-primary">Execute Command</button>
+        {{ else }}
+            <p class="text-center"><em>Log in to execute commands on instances.</em></p>
+        {{ end }}
+    </form>
+</div>
+
+<script>
+    function toggleCustomCommand() {
+        var commandType = document.getElementById('command_type').value;
+        var customCommandDiv = document.getElementById('custom_command_div');
+        
+        if (commandType === 'custom') {
+            customCommandDiv.style.display = 'block';
+        } else {
+            customCommandDiv.style.display = 'none';
+        }
+    }
+</script>
+{{ end }}

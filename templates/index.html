@@ -43,55 +43,181 @@
         </div>
     </form>
 
-    <!-- Form to Select Instances and Restart -->
-    <form method="POST" action="/restart">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Select</th>
-                    <th>AWS Account Name</th>
-                    <th>State</th>
-                    <th>Name</th>
-                    <th>Instance ID</th>
-                    <th>Service</th>
-                    <th>Owner</th>
-                    <th>Region</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{if .Instances}}
-                {{range .Instances}}
-                <tr>
-                    <td><input type="checkbox" name="instance_ids" value="{{.ID}}"></td>
-                    <td>{{.AWSAccountName}}</td>
-                    <td>{{.State}}</td>
-                    <td>{{.EC2Name}}</td>
-                    <td>{{.ID}}</td>
-                    <td>{{.Service}}</td>
-                    <td>{{.Owner}}</td>
-                    <td>{{.Region}}</td>
-                </tr>
-                {{end}}
-                {{else}}
-                <tr>
-                    <td colspan="8" class="text-center">No instances found for the selected criteria.</td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+    <!-- Instances Table -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>
+                    <input type="checkbox" id="select-all-checkbox">
+                    <label for="select-all-checkbox">Select All</label>
+                </th>
+                <th>AWS Account Name</th>
+                <th>State</th>
+                <th>Name</th>
+                <th>Instance ID</th>
+                <th>Service</th>
+                <th>Owner</th>
+                <th>Region</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{if .Instances}}
+            {{range .Instances}}
+            <tr>
+                <td><input type="checkbox" class="instance-checkbox" value="{{.ID}}"></td>
+                <td>{{.AWSAccountName}}</td>
+                <td>{{.State}}</td>
+                <td>{{.EC2Name}}</td>
+                <td>{{.ID}}</td>
+                <td>{{.Service}}</td>
+                <td>{{.Owner}}</td>
+                <td>{{.Region}}</td>
+            </tr>
+            {{end}}
+            {{else}}
+            <tr>
+                <td colspan="8" class="text-center">No instances found for the selected criteria.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
 
-        {{ if .IsLoggedIn }}
-            <button type="submit" class="btn btn-danger">Restart Selected Instances</button>
-        {{ else }}
-            <p class="text-center"><em>Log in to restart instances.</em></p>
-        {{ end }}
-    </form>
+    {{ if .IsLoggedIn }}
+    <div class="row">
+        <!-- Form to Restart Instances -->
+        <div class="col-md-4 mb-3">
+            <form method="POST" action="/restart" id="restartForm">
+                <!-- Hidden checkboxes will be populated via JavaScript -->
+                <button type="submit" class="btn btn-danger btn-block" id="restart-button" disabled>Restart Selected Instances</button>
+            </form>
+        </div>
+        
+        <!-- Form for Security Patching -->
+        <div class="col-md-4 mb-3">
+            <form method="POST" action="/command" id="patchForm">
+                <input type="hidden" name="command_type" value="patching">
+                <!-- Hidden checkboxes will be populated via JavaScript -->
+                <button type="submit" class="btn btn-success btn-block" id="patch-button" disabled>Security Patch Selected Instances</button>
+            </form>
+        </div>
+        
+        <!-- Form for Custom Command -->
+        <div class="col-md-4">
+            <form method="POST" action="/command" id="commandForm" class="form-inline">
+                <input type="hidden" name="command_type" value="custom">
+                <!-- Hidden checkboxes will be populated via JavaScript -->
+                <div class="input-group w-100">
+                    <input type="text" name="custom_command" class="form-control" placeholder="Enter custom command" required>
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary" id="command-button" disabled>Run Command</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {{ else }}
+    <p class="text-center"><em>Log in to restart instances or run commands.</em></p>
+    {{ end }}
 </div>
 
-<!-- Optional JavaScript -->
+<!-- JavaScript for handling instance selection -->
 <script>
     function submitForm() {
         document.getElementById('filterForm').submit();
     }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        const instanceCheckboxes = document.querySelectorAll('.instance-checkbox');
+        const restartButton = document.getElementById('restart-button');
+        const patchButton = document.getElementById('patch-button');
+        const commandButton = document.getElementById('command-button');
+        const restartForm = document.getElementById('restartForm');
+        const patchForm = document.getElementById('patchForm');
+        const commandForm = document.getElementById('commandForm');
+        
+        // Select/deselect all checkboxes
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            
+            instanceCheckboxes.forEach(function(checkbox) {
+                checkbox.checked = isChecked;
+            });
+            
+            updateButtons();
+        });
+        
+        // Function to update button states
+        function updateButtons() {
+            let checkedCount = 0;
+            
+            // Count checked boxes
+            instanceCheckboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    checkedCount++;
+                }
+            });
+            
+            // Enable/disable buttons based on selection
+            restartButton.disabled = checkedCount === 0;
+            patchButton.disabled = checkedCount === 0;
+            commandButton.disabled = checkedCount === 0;
+            
+            // Update select all checkbox state
+            if (checkedCount === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedCount === instanceCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Function to sync selections before form submission
+        function prepareForm(form) {
+            // Clear any existing hidden inputs
+            form.querySelectorAll('input[name="instance_ids"]').forEach(el => el.remove());
+            
+            // Add new hidden inputs for each checked instance
+            instanceCheckboxes.forEach(function(checkbox) {
+                if (checkbox.checked) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'instance_ids';
+                    input.value = checkbox.value;
+                    form.appendChild(input);
+                }
+            });
+        }
+        
+        // Add event listeners to checkboxes
+        instanceCheckboxes.forEach(function(checkbox) {
+            checkbox.addEventListener('change', updateButtons);
+        });
+        
+        // Add form submission handlers
+        restartForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            prepareForm(restartForm);
+            this.submit();
+        });
+        
+        patchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            prepareForm(patchForm);
+            this.submit();
+        });
+        
+        commandForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            prepareForm(commandForm);
+            this.submit();
+        });
+        
+        // Initial update
+        updateButtons();
+    });
 </script>
 {{ end }}

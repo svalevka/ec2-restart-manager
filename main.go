@@ -63,6 +63,9 @@ func main() {
 	http.HandleFunc("/auth/callback", auth.CallbackHandler)
 	http.HandleFunc("/status", handlers.StatusHandler)
 
+	// Handles for runnign ssm comm
+	http.Handle("/command", auth.AuthMiddleware(http.HandlerFunc(handlers.CommandHandler)))
+	http.HandleFunc("/command-status", handlers.CommandStatusHandler)
 
 	// Start the web server
 	address := "0.0.0.0:8080"
