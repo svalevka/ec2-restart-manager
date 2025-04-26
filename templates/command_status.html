@@ -1,0 +1,54 @@
+<!-- templates/command_status.html -->
+{{ define "content" }}
+<div class="container mt-4">
+    <h2>Command Execution Status</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Instance Name</th>
+                <th>Instance ID</th>
+                <th>Command</th>
+                <th>Status</th>
+                <th>Timestamp</th>
+                <th>Output</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Instances}}
+            <tr>
+                <td>{{ .EC2Name }}</td>
+                <td>{{ .ID }}</td>
+                <td><code>{{ .Command }}</code></td>
+                <td>{{ .State }}</td> <!-- Using State to represent the status -->
+                <td>{{ .CommandTimestamp }}</td>
+                <td>
+                    {{if .CommandOutput}}
+                    <button class="btn btn-sm btn-info" onclick="toggleOutput('output-{{.ID}}')">Show/Hide Output</button>
+                    <div id="output-{{.ID}}" style="display: none;">
+                        <pre class="mt-2">{{ .CommandOutput }}</pre>
+                    </div>
+                    {{else}}
+                    <em>No output available</em>
+                    {{end}}
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="6" class="text-center">No command execution statuses available.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function toggleOutput(id) {
+        var output = document.getElementById(id);
+        if (output.style.display === "none") {
+            output.style.display = "block";
+        } else {
+            output.style.display = "none";
+        }
+    }
+</script>
+{{ end }}
