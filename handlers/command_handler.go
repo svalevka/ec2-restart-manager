@@ -49,18 +49,21 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Determine which command to execute
-    var command, commandName string
-    if commandType == "patching" {
-        command = "sudo yum update -y --security || sudo dnf update -y --security"
-        commandName = "Security Patching"
-    } else if commandType == "custom" && customCommand != "" {
-        command = customCommand
-        commandName = "Custom Command"
-    } else {
-        http.Error(w, "Invalid command type or missing custom command", http.StatusBadRequest)
-        return
-    }
+	// Determine which command to execute
+	var command, commandName string
+	if commandType == "patching" {
+		command = "sudo yum update-minimal --security -y || sudo dnf update --security --bugfix --enhancement=important --enhancement=moderate --enhancement=low -y"
+		commandName = "Security Patching"
+	} else if commandType == "upgrade" {
+		command = "sudo yum update -y || sudo dnf update -y"
+		commandName = "System Upgrade"
+	} else if commandType == "custom" && customCommand != "" {
+		command = customCommand
+		commandName = "Custom Command"
+	} else {
+		http.Error(w, "Invalid command type or missing custom command", http.StatusBadRequest)
+		return
+	}
 
     for _, instanceID := range instanceIDs {
         // Retrieve instance details such as account number and region

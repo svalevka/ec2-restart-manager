@@ -1,7 +1,7 @@
 {{ define "content" }}
 <div class="container mt-4">
 
-    <!-- Filter Form (separate from Restart Form) -->
+    <!-- Filter Form -->
     <form method="POST" action="/" id="filterForm">
         <div class="form-row">
             <div class="form-group col-md-3">
@@ -85,31 +85,40 @@
     {{ if .IsLoggedIn }}
     <div class="row">
         <!-- Form to Restart Instances -->
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <form method="POST" action="/restart" id="restartForm">
                 <!-- Hidden checkboxes will be populated via JavaScript -->
-                <button type="submit" class="btn btn-danger btn-block" id="restart-button" disabled>Restart Selected Instances</button>
+                <button type="submit" class="btn btn-danger btn-block" id="restart-button" disabled>Restart</button>
             </form>
         </div>
         
         <!-- Form for Security Patching -->
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3">
             <form method="POST" action="/command" id="patchForm">
                 <input type="hidden" name="command_type" value="patching">
                 <!-- Hidden checkboxes will be populated via JavaScript -->
-                <button type="submit" class="btn btn-success btn-block" id="patch-button" disabled>Security Patch Selected Instances</button>
+                <button type="submit" class="btn btn-success btn-block" id="patch-button" disabled>Patch</button>
+            </form>
+        </div>
+        
+        <!-- Form for System Upgrade -->
+        <div class="col-md-3 mb-3">
+            <form method="POST" action="/command" id="upgradeForm">
+                <input type="hidden" name="command_type" value="upgrade">
+                <!-- Hidden checkboxes will be populated via JavaScript -->
+                <button type="submit" class="btn btn-warning btn-block" id="upgrade-button" disabled>Upgrade</button>
             </form>
         </div>
         
         <!-- Form for Custom Command -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <form method="POST" action="/command" id="commandForm" class="form-inline">
                 <input type="hidden" name="command_type" value="custom">
                 <!-- Hidden checkboxes will be populated via JavaScript -->
                 <div class="input-group w-100">
-                    <input type="text" name="custom_command" class="form-control" placeholder="Enter custom command" required>
+                    <input type="text" name="custom_command" class="form-control" placeholder="Custom command" required>
                     <div class="input-group-append">
-                        <button type="submit" class="btn btn-primary" id="command-button" disabled>Run Command</button>
+                        <button type="submit" class="btn btn-primary" id="command-button" disabled>Run</button>
                     </div>
                 </div>
             </form>
@@ -131,9 +140,11 @@
         const instanceCheckboxes = document.querySelectorAll('.instance-checkbox');
         const restartButton = document.getElementById('restart-button');
         const patchButton = document.getElementById('patch-button');
+        const upgradeButton = document.getElementById('upgrade-button');
         const commandButton = document.getElementById('command-button');
         const restartForm = document.getElementById('restartForm');
         const patchForm = document.getElementById('patchForm');
+        const upgradeForm = document.getElementById('upgradeForm');
         const commandForm = document.getElementById('commandForm');
         
         // Select/deselect all checkboxes
@@ -161,6 +172,7 @@
             // Enable/disable buttons based on selection
             restartButton.disabled = checkedCount === 0;
             patchButton.disabled = checkedCount === 0;
+            upgradeButton.disabled = checkedCount === 0;
             commandButton.disabled = checkedCount === 0;
             
             // Update select all checkbox state
@@ -207,6 +219,12 @@
         patchForm.addEventListener('submit', function(e) {
             e.preventDefault();
             prepareForm(patchForm);
+            this.submit();
+        });
+        
+        upgradeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            prepareForm(upgradeForm);
             this.submit();
         });
         
