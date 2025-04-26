@@ -2,6 +2,7 @@
 package handlers
 
 import (
+    "fmt"
     "log"
     "net/http"
     "sync"
@@ -12,7 +13,7 @@ import (
     "ec2-restart-manager/models"
     "ec2-restart-manager/auth"
     "ec2-restart-manager/config"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
+    "github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
 var command_role_name = "ec2-restart-manager"
@@ -49,28 +50,57 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-	// Determine which command to execute
-	var command, commandName string
-	if commandType == "patching" {
-		command = "sudo yum update-minimal --security -y || sudo dnf update --security --bugfix --enhancement=important --enhancement=moderate --enhancement=low -y"
-		commandName = "Security Patching"
-	} else if commandType == "upgrade" {
-		command = "sudo yum update -y || sudo dnf update -y"
-		commandName = "System Upgrade"
-	} else if commandType == "custom" && customCommand != "" {
-		command = customCommand
-		commandName = "Custom Command"
-	} else {
-		http.Error(w, "Invalid command type or missing custom command", http.StatusBadRequest)
-		return
-	}
-
     for _, instanceID := range instanceIDs {
         // Retrieve instance details such as account number and region
         instance, err := models.GetInstanceDetails(instanceID)
         if err != nil {
             log.Printf("Error fetching instance details for %s: %v", instanceID, err)
-            updateCommandStatus(instanceID, "Failed to fetch instance details", "", "", command)
+            updateCommandStatus(instanceID, "Failed to fetch instance details", "", "", "")
+            continue
+        }
+
+        // Determine which command to execute based on command type and environment class
+        var command, commandName string
+        
+        if commandType == "patching" {
+            baseCommand := "sudo yum update-minimal --security -y || sudo dnf update --security --bugfix --enhancement=important --enhancement=moderate --enhancement=low -y"
+            envClass := instance.EnvironmentClass
+            
+            if envClass == "stg" || envClass == "dev" {
+                // For staging/dev: Tuesday at 2 AM GMT with reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next Tuesday 02:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
+                commandName = "Scheduled Security Patching (Tuesday 2 AM with reboot)"
+            } else if envClass == "prod" {
+                // For prod: Wednesday at 11 AM GMT without reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next Wednesday 11:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
+                commandName = "Scheduled Security Patching (Wednesday 11 AM)"
+            } else {
+                // For other environments, run immediately
+                command = baseCommand
+                commandName = "Security Patching"
+            }
+        } else if commandType == "upgrade" {
+            baseCommand := "sudo yum update -y || sudo dnf update -y"
+            envClass := instance.EnvironmentClass
+            
+            if envClass == "stg" || envClass == "dev" {
+                // For staging/dev: Tuesday at 2 AM GMT with reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next Tuesday 02:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
+                commandName = "Scheduled System Upgrade (Tuesday 2 AM with reboot)"
+            } else if envClass == "prod" {
+                // For prod: Wednesday at 11 AM GMT without reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next Wednesday 11:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
+                commandName = "Scheduled System Upgrade (Wednesday 11 AM)"
+            } else {
+                // For other environments, run immediately
+                command = baseCommand
+                commandName = "System Upgrade"
+            }
+        } else if commandType == "custom" && customCommand != "" {
+            command = customCommand
+            commandName = "Custom Command"
+        } else {
+            updateCommandStatus(instanceID, "Invalid command type", "", "", "")
             continue
         }
 

@@ -15,6 +15,7 @@ type EC2Instance struct {
 	Owner            string `csv:"Owner"`
 	ID               string `csv:"ID"`
 	Region           string `csv:"Region"`
+	EnvironmentClass string `csv:"EnvironmentClass"`
 	RestartTimestamp string 
     CommandOutput    string  // Output of the most recent command execution
     CommandTimestamp string  // When the command was executed
