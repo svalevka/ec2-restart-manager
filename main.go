@@ -1,3 +1,4 @@
+// Modified code for main.go (relevant sections only)
 package main
 
 import (
@@ -41,6 +42,7 @@ func main() {
 	// Inject SSM client and environment into models and handlers
 	handlers.InjectSSMClient(configSSMClient)
 	models.InjectSSMClient(configSSMClient)
+	handlers.InjectEnvironment(cfg.Environment)
 	models.InjectEnvName(cfg.Environment)
 
 	// Load the schedule config from Parameter Store
@@ -67,8 +69,8 @@ func main() {
 		os.Setenv("AZURE_AD_CLIENT_SECRET", secretValue)
 	}
 
-	// Initialize authentication with cfg.Config (not cfg)
-	auth.InitializeAuth(cfg.Config)
+	// Initialize authentication with the AzureAD config
+	auth.InitializeAuth(cfg)
 
 	// Setup HTTP routes
 	http.HandleFunc("/", handlers.IndexHandler)

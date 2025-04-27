@@ -35,6 +35,14 @@ var commandStatusMap = make(map[string]CommandStatus)
 
 // CommandHandler handles the request to execute commands on EC2 instances
 func CommandHandler(w http.ResponseWriter, r *http.Request) {
+    // First refresh the schedule configuration
+    if err := models.LoadScheduleConfig(); err != nil {
+        log.Printf("Error refreshing schedule configuration: %v", err)
+        // Continue anyway with the cached config
+    } else {
+        log.Printf("Successfully refreshed schedule configuration before command execution")
+    }
+
     if err := r.ParseForm(); err != nil {
         http.Error(w, "Failed to parse form data", http.StatusBadRequest)
         log.Printf("Error parsing form data: %v", err)
@@ -50,8 +58,11 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Get the schedule configuration
+    // Get the schedule configuration (now guaranteed to be fresh)
     scheduleConfig := models.GetScheduleConfig()
+    log.Printf("Using schedule config: Dev/Stg day=%s time=%s, Prod day=%s time=%s", 
+               scheduleConfig.StgDevDay, scheduleConfig.StgDevTime, 
+               scheduleConfig.ProdDay, scheduleConfig.ProdTime)
 
     for _, instanceID := range instanceIDs {
         // Retrieve instance details such as account number and region
@@ -262,4 +273,3 @@ func CommandStatusHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Error rendering command status page", http.StatusInternalServerError)
     }
 }
-

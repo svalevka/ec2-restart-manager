@@ -1,3 +1,4 @@
+// Modified code for config/config.go
 package config
 
 import (
@@ -19,9 +20,11 @@ type AzureADConfig struct {
 }
 
 type EnvConfig struct {
-	S3      S3Config     `yaml:"s3"`
-	AzureAD AzureADConfig `yaml:"azure_ad"`
-	Region  string        `yaml:"region"`
+	S3       S3Config     `yaml:"s3"`
+	AzureAD  AzureADConfig `yaml:"azure_ad"`
+	Region   string        `yaml:"region"`
+	// Adding Environment field to store the environment name
+	Environment string        // This is not from yaml, will be set programmatically
 }
 
 type Config struct {
@@ -49,6 +52,9 @@ func LoadConfig() (*EnvConfig, error) {
 	if !ok {
 		return nil, err
 	}
+	
+	// Set the Environment field with the name of the environment
+	envConfig.Environment = environment
 
 	return &envConfig, nil
 }
