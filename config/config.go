@@ -1,12 +1,15 @@
 package config
 
 import (
-	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
-
+	"gopkg.in/yaml.v2"
 )
+
+type S3Config struct {
+	Bucket string `yaml:"bucket"`
+	Key    string `yaml:"key"`
+}
 
 type AzureADConfig struct {
 	TenantID    string `yaml:"tenant_id"`
@@ -15,47 +18,37 @@ type AzureADConfig struct {
 	GroupID     string `yaml:"group_id"`
 }
 
-type S3Config struct {
-	Bucket string `yaml:"bucket"`
-	Key    string `yaml:"key"`
-}
-
 type EnvConfig struct {
-	Environment string        // Field to store environment name
-	S3          S3Config      `yaml:"s3"`
-	AzureAD     AzureADConfig `yaml:"azure_ad"`
-	Region      string        `yaml:"region"` // New field for region
+	S3      S3Config     `yaml:"s3"`
+	AzureAD AzureADConfig `yaml:"azure_ad"`
+	Region  string        `yaml:"region"`
 }
 
 type Config struct {
 	Env map[string]EnvConfig `yaml:"env"`
 }
 
+// LoadConfig loads the YAML config file and returns the config for the active environment
 func LoadConfig() (*EnvConfig, error) {
-	data, err := os.ReadFile("config/config.yaml")
+	configFile, err := os.ReadFile("config/config.yaml")
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg Config
-	err = yaml.Unmarshal(data, &cfg)
-	if err != nil {
+	var config Config
+	if err := yaml.Unmarshal(configFile, &config); err != nil {
 		return nil, err
 	}
 
-	// Determine the environment
-	env := os.Getenv("ENVIRONMENT")
-	if env == "" {
-		env = "test" // Default to 'test' if ENVIRONMENT is not set
+	environment := os.Getenv("ENVIRONMENT")
+	if environment == "" {
+		environment = "dev" // default
 	}
 
-	// Retrieve the configuration for the specified environment
-	envConfig, exists := cfg.Env[env]
-	if !exists {
-		return nil, fmt.Errorf("environment %q configuration not found", env)
+	envConfig, ok := config.Env[environment]
+	if !ok {
+		return nil, err
 	}
-
-	envConfig.Environment = env // Set the environment name in the config
 
 	return &envConfig, nil
 }

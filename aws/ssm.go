@@ -57,3 +57,36 @@ func GetCommandStatus(ssmClient *ssm.Client, commandID string, instanceID string
 
     return string(output.Status), *output.StandardOutputContent, nil
 }
+
+// GetParameter retrieves a parameter value from AWS SSM Parameter Store
+func GetParameter(ssmClient *ssm.Client, name string) (string, error) {
+    input := &ssm.GetParameterInput{
+        Name:           aws.String(name),
+        WithDecryption: aws.Bool(true), // even if not SecureString, fine to request decryption
+    }
+
+    output, err := ssmClient.GetParameter(context.Background(), input)
+    if err != nil {
+        return "", fmt.Errorf("failed to get parameter %s: %w", name, err)
+    }
+
+    return *output.Parameter.Value, nil
+}
+
+
+// PutParameter saves or updates a parameter in AWS SSM Parameter Store
+func PutParameter(ssmClient *ssm.Client, name string, value string) error {
+    input := &ssm.PutParameterInput{
+        Name:      aws.String(name),
+        Value:     aws.String(value),
+        Type:      "String", // You are using regular strings
+        Overwrite: aws.Bool(true),     // Always overwrite existing values
+    }
+
+    _, err := ssmClient.PutParameter(context.Background(), input)
+    if err != nil {
+        return fmt.Errorf("failed to put parameter %s: %w", name, err)
+    }
+
+    return nil
+}

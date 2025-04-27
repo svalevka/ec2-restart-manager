@@ -50,6 +50,9 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Get the schedule configuration
+    scheduleConfig := models.GetScheduleConfig()
+
     for _, instanceID := range instanceIDs {
         // Retrieve instance details such as account number and region
         instance, err := models.GetInstanceDetails(instanceID)
@@ -67,13 +70,23 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
             envClass := instance.EnvironmentClass
             
             if envClass == "stg" || envClass == "dev" {
-                // For staging/dev: Tuesday at 2 AM GMT with reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next Tuesday 02:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
-                commandName = "Scheduled Security Patching (Tuesday 2 AM with reboot)"
+                // For staging/dev: Use configured day/time with reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
+                    baseCommand, 
+                    scheduleConfig.StgDevDay, 
+                    scheduleConfig.StgDevTime)
+                commandName = fmt.Sprintf("Scheduled Security Patching (%s %s GMT with reboot)", 
+                    scheduleConfig.StgDevDay, 
+                    scheduleConfig.StgDevTime)
             } else if envClass == "prod" {
-                // For prod: Wednesday at 11 AM GMT without reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next Wednesday 11:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
-                commandName = "Scheduled Security Patching (Wednesday 11 AM)"
+                // For prod: Use configured day/time without reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
+                    baseCommand, 
+                    scheduleConfig.ProdDay, 
+                    scheduleConfig.ProdTime)
+                commandName = fmt.Sprintf("Scheduled Security Patching (%s %s GMT)", 
+                    scheduleConfig.ProdDay, 
+                    scheduleConfig.ProdTime)
             } else {
                 // For other environments, run immediately
                 command = baseCommand
@@ -84,13 +97,23 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
             envClass := instance.EnvironmentClass
             
             if envClass == "stg" || envClass == "dev" {
-                // For staging/dev: Tuesday at 2 AM GMT with reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next Tuesday 02:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
-                commandName = "Scheduled System Upgrade (Tuesday 2 AM with reboot)"
+                // For staging/dev: Use configured day/time with reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
+                    baseCommand, 
+                    scheduleConfig.StgDevDay, 
+                    scheduleConfig.StgDevTime)
+                commandName = fmt.Sprintf("Scheduled System Upgrade (%s %s GMT with reboot)", 
+                    scheduleConfig.StgDevDay, 
+                    scheduleConfig.StgDevTime)
             } else if envClass == "prod" {
-                // For prod: Wednesday at 11 AM GMT without reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next Wednesday 11:00 GMT' +%%Y%%m%%d%%H%%M)", baseCommand)
-                commandName = "Scheduled System Upgrade (Wednesday 11 AM)"
+                // For prod: Use configured day/time without reboot
+                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
+                    baseCommand, 
+                    scheduleConfig.ProdDay, 
+                    scheduleConfig.ProdTime)
+                commandName = fmt.Sprintf("Scheduled System Upgrade (%s %s GMT)", 
+                    scheduleConfig.ProdDay, 
+                    scheduleConfig.ProdTime)
             } else {
                 // For other environments, run immediately
                 command = baseCommand
@@ -239,3 +262,4 @@ func CommandStatusHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Error rendering command status page", http.StatusInternalServerError)
     }
 }
+
