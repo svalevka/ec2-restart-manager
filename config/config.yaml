@@ -22,17 +22,6 @@ env:
       group_id: "e0841785-e652-4a73-a748-f185a8a57a7a" # SG-APP-EC2-restart-manager
     region: "eu-west-2"
 
-  # test:
-  #   s3:
-  #     bucket: "ld-shared-dev-eu-west-2-ec2-inventory"
-  #     key: "ec2_inventory-current.csv"
-  #   azure_ad:
-  #     tenant_id: "a7bbe832-532a-4d60-930a-c47c8840745e"
-  #     client_id: "14e1a65a-80b9-4ef4-808b-5e0609765156"
-  #     redirect_url: "http://localhost:8080/auth/callback"
-  #     group_id: "e0841785-e652-4a73-a748-f185a8a57a7a" # SG-APP-EC2-restart-manager
-  #   region: "eu-west-2"
-
   test:
     s3:
       bucket: "inventory-copper-test"

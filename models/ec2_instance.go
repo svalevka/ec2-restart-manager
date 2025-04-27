@@ -39,6 +39,7 @@ type TemplateData struct {
 	UserName 			   string	
 	AzureAuthenticated	   bool
 	StatusMap              map[string]string 
+	Data				   map[string]interface{}
 }
 
 // Global cache to store EC2 instances by their ID
