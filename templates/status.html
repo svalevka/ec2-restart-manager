@@ -1,0 +1,29 @@
+{{ define "content" }}
+<div class="container mt-4">
+    <h2>Instance Restart Status</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Instance Name</th>
+                <th>Instance ID</th>
+                <th>Status</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Instances}}
+            <tr>
+                <td>{{ .EC2Name }}</td>
+                <td>{{ .ID }}</td>
+                <td>{{ .State }}</td> <!-- Using State to represent the status -->
+                <td>{{ .RestartTimestamp }}</td> <!-- Displaying the timestamp -->
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="4" class="text-center">No instance statuses available.</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{ end }}

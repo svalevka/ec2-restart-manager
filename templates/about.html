@@ -1,0 +1,38 @@
+{{ define "content" }}
+<div class="container mt-4">
+    <div class="border rounded mb-4">
+        <!-- Header Row -->
+        <div class="bg-light text-dark p-2 rounded-top" style="font-size: 1rem; font-weight: bold;">
+            How It Works
+        </div>
+        <!-- Content Row -->
+        <div class="p-3">
+            <p>
+                EC2 Restart Manager retrieves instance data from an Amazon S3 bucket. The S3 bucket is updated every 30 minutes by a separate background process.
+            </p>
+            <p>
+                Use the <strong>Update</strong> button to manually fetch the latest instance information from the S3 bucket at any time. This ensures you always have access to the most current data when needed.
+            </p>
+            <p>
+                The <strong>Status</strong> page displays the outcome of the last restart operation, providing transparency and clarity about recent actions.
+            </p>
+        </div>
+    </div>
+
+    <div class="border rounded mb-4">
+        <!-- Header Row -->
+        <div class="bg-light text-dark p-2 rounded-top" style="font-size: 1rem; font-weight: bold;">
+            Permissions and Access
+        </div>
+        <!-- Content Row -->
+        <div class="p-3">
+            <p>
+                Everyone can view instance information, including filtering by owner, service, AWS account name, or region.
+            </p>
+            <p>
+                Restart operations are restricted to members of the Active Directory (AD) group <strong>SG-APP-EC2-restart-manager</strong>. This ensures that only authorized users can perform critical actions.
+            </p>
+        </div>
+    </div>
+</div>
+{{ end }}

@@ -1,0 +1,48 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand bg-dark">
+        <a class="navbar-brand text-white" href="/">EC2 Manager</a>
+        <ul class="navbar-nav">
+            <li class="nav-item"><a class="nav-link text-white" href="/">Home</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/about">About</a></li>
+            {{ if .IsLoggedIn }}
+                <li class="nav-item"><a class="nav-link text-white" href="/status">Status</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="/logout">Logout</a></li>
+            {{ else if .AzureAuthenticated }}
+                <li class="nav-item"><a class="nav-link text-white" href="/status">Status</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="/logout">Logout</a></li>
+            {{ else }}
+                <li class="nav-item"><a class="nav-link text-white" href="/login">Login</a></li>
+            {{ end }}
+            <li class="nav-item">
+                <form action="/update" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-link nav-link text-white">Update</button>
+                </form>
+            </li>
+        </ul>
+
+        <!-- Show username and version on the right -->
+        <div class="ml-auto d-flex align-items-center">
+            {{ if .IsLoggedIn }}
+                <span class="navbar-text text-white mr-3">{{.UserName}}</span>
+            {{ end }}
+            <span class="navbar-text text-white">{{.Version}}</span>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container mt-4">
+        {{template "content" .}}
+    </div>
+
+</body>
+</html>
+{{end}}
