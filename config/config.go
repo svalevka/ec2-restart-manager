@@ -3,7 +3,7 @@ package config
 
 import (
 	"os"
-
+	"fmt"
 	"gopkg.in/yaml.v2"
 )
 
@@ -38,23 +38,25 @@ func LoadConfig() (*EnvConfig, error) {
 		return nil, err
 	}
 
-	var config Config
-	if err := yaml.Unmarshal(configFile, &config); err != nil {
+	var cfg Config
+	err = yaml.Unmarshal(configFile, &cfg)
+	if err != nil {
 		return nil, err
 	}
 
-	environment := os.Getenv("ENVIRONMENT")
-	if environment == "" {
-		environment = "dev" // default
+	// Determine the environment
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = "test" // Default to 'test' if ENVIRONMENT is not set
 	}
 
-	envConfig, ok := config.Env[environment]
-	if !ok {
-		return nil, err
+	// Retrieve the configuration for the specified environment
+	envConfig, exists := cfg.Env[env]
+	if !exists {
+		return nil, fmt.Errorf("environment %q configuration not found", env)
 	}
-	
-	// Set the Environment field with the name of the environment
-	envConfig.Environment = environment
+
+	envConfig.Environment = env // Set the environment name in the config
 
 	return &envConfig, nil
 }

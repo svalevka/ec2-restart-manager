@@ -10,16 +10,17 @@ type EC2Instance struct {
 	AWSAccountName   string `csv:"AWS Account Name"`
 	AWSAccountNumber string `csv:"AWS Account ID"`
 	State            string `csv:"State"`
+	UptimeDays  	 string `csv:"Uptime Days"`
 	EC2Name          string `csv:"EC2 Name"`
 	Service          string `csv:"Service"`
 	Owner            string `csv:"Owner"`
 	ID               string `csv:"ID"`
 	Region           string `csv:"Region"`
 	EnvironmentClass string `csv:"EnvironmentClass"`
-	RestartTimestamp string 
     CommandOutput    string  // Output of the most recent command execution
     CommandTimestamp string  // When the command was executed
     Command          string  // The command that was executed
+	RestartTimestamp string 
 	// Add other fields as needed
 }
 

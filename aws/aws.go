@@ -4,7 +4,6 @@ import (
     "context"
     "log"
     "fmt"
-
     "github.com/aws/aws-sdk-go-v2/aws"
     "github.com/aws/aws-sdk-go-v2/config"
     "github.com/aws/aws-sdk-go-v2/service/sts"
@@ -12,7 +11,7 @@ import (
 )
 
 // Global AWS configuration
-var AWSConfig aws.Config  // ✅ Your global config object
+var AWSConfig aws.Config
 
 // Initialize AWS configuration
 func InitAWSConfig() error {
@@ -25,39 +24,43 @@ func InitAWSConfig() error {
     return nil
 }
 
+func AssumeRoleInAccount(role_name string, accountID string) (aws.Config, error) {
+    // Define the role ARN based on the account ID and the role name
+    roleArn := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, role_name)
 
-// AssumeRoleInAccount assumes a role in another AWS account and returns a new AWS config
-func AssumeRoleInAccount(roleName string, accountID string) (aws.Config, error) {
-    roleArn := fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName)
-
+    // Create an STS client using the global AWS configuration
     stsClient := sts.NewFromConfig(AWSConfig)
 
+    // Create an AssumeRole provider with the specified role ARN
     assumeRoleProvider := stscreds.NewAssumeRoleProvider(stsClient, roleArn)
 
+    // Create a new AWS config with the assumed role's credentials provider
     assumedConfig, err := config.LoadDefaultConfig(context.Background(),
         config.WithCredentialsProvider(aws.NewCredentialsCache(assumeRoleProvider)),
     )
     if err != nil {
-        return aws.Config{}, fmt.Errorf("failed to assume role %s in account %s: %w", roleArn, accountID, err)
+        return aws.Config{}, fmt.Errorf("failed to create AWS config with assumed role credentials: %w", err)
     }
 
     log.Printf("Assumed role %s in account %s", roleArn, accountID)
     return assumedConfig, nil
 }
 
-// GetCallerIdentity prints the current caller identity
+
 func GetCallerIdentity(cfg aws.Config) error {
     stsClient := sts.NewFromConfig(cfg)
 
+    // Call GetCallerIdentity
     result, err := stsClient.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
     if err != nil {
         return fmt.Errorf("failed to get caller identity: %w", err)
     }
 
+    // Output the caller identity to the console and logs
     callerInfo := fmt.Sprintf("Assumed Role ARN: %s, Account: %s, User ID: %s",
         *result.Arn, *result.Account, *result.UserId)
-    fmt.Println(callerInfo)
-    log.Println(callerInfo)
+    fmt.Println(callerInfo)   // Print to console
+    log.Println(callerInfo)   // Log for records
 
     return nil
 }
