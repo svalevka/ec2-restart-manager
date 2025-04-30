@@ -3,7 +3,7 @@ package config
 
 import (
 	"os"
-
+	"fmt"
 	"gopkg.in/yaml.v2"
 )
 
@@ -39,7 +39,7 @@ func LoadConfig() (*EnvConfig, error) {
 	}
 
 	var cfg Config
-	err = yaml.Unmarshal(data, &cfg)
+	err = yaml.Unmarshal(configFile, &cfg)
 	if err != nil {
 		return nil, err
 	}
