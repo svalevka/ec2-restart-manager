@@ -44,21 +44,18 @@
     </form>
 
     <!-- Instances Table -->
-    <table class="table table-striped">
+    <table id="instanceTable" class="table table-striped">
         <thead>
             <tr>
-                <th>
-                    <input type="checkbox" id="select-all-checkbox">
-                    <label for="select-all-checkbox">Select All</label>
-                </th>
-                <th>AWS Account Name</th>
-                <th>State</th>
-                <th>Uptime Days</th>
-                <th>Name</th>
-                <th>Instance ID</th>
-                <th>Service</th>
-                <th>Owner</th>
-                <th>Region</th>
+                <th><input type="checkbox" id="select-all-checkbox"></th>
+                <th onclick="sortTable(1)">AWS Account Name</th>
+                <th onclick="sortTable(2)">State</th>
+                <th onclick="sortTable(3)">Uptime Days</th>
+                <th onclick="sortTable(4)">Name</th>
+                <th onclick="sortTable(5)">Instance ID</th>
+                <th onclick="sortTable(6)">Service</th>
+                <th onclick="sortTable(7)">Owner</th>
+                <th onclick="sortTable(8)">Region</th>
             </tr>
         </thead>
         <tbody>
@@ -68,7 +65,7 @@
                 <td><input type="checkbox" class="instance-checkbox" value="{{.ID}}"></td>
                 <td>{{.AWSAccountName}}</td>
                 <td>{{.State}}</td>
-                <td>{{.UptimeDays}}</td>                
+                <td>{{.UptimeDays}}</td>
                 <td>{{.EC2Name}}</td>
                 <td>{{.ID}}</td>
                 <td>{{.Service}}</td>
@@ -78,7 +75,7 @@
             {{end}}
             {{else}}
             <tr>
-                <td colspan="8" class="text-center">No instances found for the selected criteria.</td>
+                <td colspan="9" class="text-center">No instances found for the selected criteria.</td>
             </tr>
             {{end}}
         </tbody>
@@ -86,37 +83,33 @@
 
     {{ if .IsLoggedIn }}
     <div class="row">
-        <!-- Form to Restart Instances -->
+        <!-- Restart -->
         <div class="col-md-3 mb-3">
             <form method="POST" action="/restart" id="restartForm">
-                <!-- Hidden checkboxes will be populated via JavaScript -->
                 <button type="submit" class="btn btn-danger btn-block" id="restart-button" disabled>Restart</button>
             </form>
         </div>
-        
-        <!-- Form for Security Patching -->
+
+        <!-- Patching -->
         <div class="col-md-3 mb-3">
             <form method="POST" action="/command" id="patchForm">
                 <input type="hidden" name="command_type" value="patching">
-                <!-- Hidden checkboxes will be populated via JavaScript -->
                 <button type="submit" class="btn btn-success btn-block" id="patch-button" disabled>Patch</button>
             </form>
         </div>
-        
-        <!-- Form for System Upgrade -->
+
+        <!-- Upgrade -->
         <div class="col-md-3 mb-3">
             <form method="POST" action="/command" id="upgradeForm">
                 <input type="hidden" name="command_type" value="upgrade">
-                <!-- Hidden checkboxes will be populated via JavaScript -->
                 <button type="submit" class="btn btn-warning btn-block" id="upgrade-button" disabled>Upgrade</button>
             </form>
         </div>
-        
-        <!-- Form for Custom Command -->
+
+        <!-- Custom command -->
         <div class="col-md-3">
             <form method="POST" action="/command" id="commandForm" class="form-inline">
                 <input type="hidden" name="command_type" value="custom">
-                <!-- Hidden checkboxes will be populated via JavaScript -->
                 <div class="input-group w-100">
                     <input type="text" name="custom_command" class="form-control" placeholder="Custom command" required>
                     <div class="input-group-append">
@@ -131,13 +124,12 @@
     {{ end }}
 </div>
 
-<!-- JavaScript for handling instance selection -->
 <script>
     function submitForm() {
         document.getElementById('filterForm').submit();
     }
-    
-    document.addEventListener('DOMContentLoaded', function() {
+
+    document.addEventListener('DOMContentLoaded', function () {
         const selectAllCheckbox = document.getElementById('select-all-checkbox');
         const instanceCheckboxes = document.querySelectorAll('.instance-checkbox');
         const restartButton = document.getElementById('restart-button');
@@ -148,96 +140,64 @@
         const patchForm = document.getElementById('patchForm');
         const upgradeForm = document.getElementById('upgradeForm');
         const commandForm = document.getElementById('commandForm');
-        
-        // Select/deselect all checkboxes
-        selectAllCheckbox.addEventListener('change', function() {
-            const isChecked = this.checked;
-            
-            instanceCheckboxes.forEach(function(checkbox) {
-                checkbox.checked = isChecked;
-            });
-            
-            updateButtons();
-        });
-        
-        // Function to update button states
+
         function updateButtons() {
-            let checkedCount = 0;
-            
-            // Count checked boxes
-            instanceCheckboxes.forEach(function(checkbox) {
-                if (checkbox.checked) {
-                    checkedCount++;
-                }
-            });
-            
-            // Enable/disable buttons based on selection
-            restartButton.disabled = checkedCount === 0;
-            patchButton.disabled = checkedCount === 0;
-            upgradeButton.disabled = checkedCount === 0;
-            commandButton.disabled = checkedCount === 0;
-            
-            // Update select all checkbox state
-            if (checkedCount === 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
-            } else if (checkedCount === instanceCheckboxes.length) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-            } else {
-                selectAllCheckbox.indeterminate = true;
-            }
+            const checkedCount = [...instanceCheckboxes].filter(cb => cb.checked).length;
+            const disabled = checkedCount === 0;
+            [restartButton, patchButton, upgradeButton, commandButton].forEach(btn => btn.disabled = disabled);
+
+            selectAllCheckbox.checked = checkedCount === instanceCheckboxes.length;
+            selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < instanceCheckboxes.length;
         }
-        
-        // Function to sync selections before form submission
+
         function prepareForm(form) {
-            // Clear any existing hidden inputs
             form.querySelectorAll('input[name="instance_ids"]').forEach(el => el.remove());
-            
-            // Add new hidden inputs for each checked instance
-            instanceCheckboxes.forEach(function(checkbox) {
-                if (checkbox.checked) {
+            instanceCheckboxes.forEach(cb => {
+                if (cb.checked) {
                     const input = document.createElement('input');
                     input.type = 'hidden';
                     input.name = 'instance_ids';
-                    input.value = checkbox.value;
+                    input.value = cb.value;
                     form.appendChild(input);
                 }
             });
         }
-        
-        // Add event listeners to checkboxes
-        instanceCheckboxes.forEach(function(checkbox) {
-            checkbox.addEventListener('change', updateButtons);
+
+        selectAllCheckbox.addEventListener('change', () => {
+            instanceCheckboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+            updateButtons();
         });
-        
-        // Add form submission handlers
-        restartForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            prepareForm(restartForm);
-            this.submit();
+
+        instanceCheckboxes.forEach(cb => cb.addEventListener('change', updateButtons));
+
+        [restartForm, patchForm, upgradeForm, commandForm].forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                prepareForm(form);
+                form.submit();
+            });
         });
-        
-        patchForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            prepareForm(patchForm);
-            this.submit();
-        });
-        
-        upgradeForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            prepareForm(upgradeForm);
-            this.submit();
-        });
-        
-        commandForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            prepareForm(commandForm);
-            this.submit();
-        });
-        
-        // Initial update
+
         updateButtons();
     });
+
+    function sortTable(colIndex) {
+        const table = document.getElementById("instanceTable");
+        const rows = Array.from(table.tBodies[0].rows);
+        const dir = table.getAttribute("data-sort-dir") === "asc" ? "desc" : "asc";
+        table.setAttribute("data-sort-dir", dir);
+
+        rows.sort((a, b) => {
+            const x = a.cells[colIndex]?.textContent.trim().toLowerCase();
+            const y = b.cells[colIndex]?.textContent.trim().toLowerCase();
+
+            const isNumeric = !isNaN(x) && !isNaN(y);
+            return dir === "asc"
+                ? (isNumeric ? x - y : x.localeCompare(y))
+                : (isNumeric ? y - x : y.localeCompare(x));
+        });
+
+        rows.forEach(row => table.tBodies[0].appendChild(row));
+    }
 </script>
 {{ end }}
