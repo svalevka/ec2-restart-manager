@@ -16,7 +16,7 @@ import (
     "github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
-var command_role_name = "ec2-restart-manager"
+var command_role_name = "ec2-restart-manager-restarter"
 
 // Mutex to handle concurrent access to the command status map
 var commandStatusLock sync.Mutex
