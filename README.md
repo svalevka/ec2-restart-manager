@@ -26,12 +26,7 @@ key := cfg.S3.Key
 Versioning is based on latest git tag found in the repo.
 To run app using custom version number: 
 ```
-<<<<<<< HEAD
-
-
-=======
 go run  -ldflags="-X ec2-restart-manager/config.Version=v1.2.3" main.go
->>>>>>> patch-manager/main
 ```
 
 ## Docker
@@ -166,6 +161,9 @@ This role can be assumed by the app cross account. This role also has permission
 
 ## Development
 
+*Versioning*
+Versioning should be managed via `.env` file. `direnv` will take care about injecting it in helper script if needed.
+
 The app can be ran using few methods, depending on where in development cycle you are:
 * Run go code directly using your development server
   * Application has access to dev accounts only
@@ -186,6 +184,12 @@ Example development cycle:
 * Run code in `shared-dev` account in EKS
     * Build and push Docker image as per `./deploy.sh`
     * Update Docker image tag in corresponding Helm template `ec2-restart-manager` in Platform team EKS namespace in `shared-dev` account
+       * If major version is released, update Helm template
+       ```
+       helm package platform/ec2-restart-manager 
+       aws ecr get-login-password --region eu-west-2 --profile shared-dev.SharedDevAdministrators | helm registry login  --username AWS  --password-stdin 733930943835.dkr.ecr.eu-west-2.amazonaws.com
+       helm push <package-name> oci://733930943835.dkr.ecr.eu-west-2.amazonaws.com/platform
+       ```
     * Open browser on https://ec2-restart-manager.dev.ld.internal
 * Promote code to `shared-prod` account in EKS.
     * Repeat the same as above for `shared-prod` account
@@ -193,3 +197,15 @@ Example development cycle:
 
 Three distinct Azure AD apps created to ensure callback addresses are used for each scenario above. See `config/config.yml` for details.
 
+## Release process
+Release to EKS is fully automated using CICD pipeline. Non prod environment will always use 'latest' tag and prod environemnt will use the tag
+in `.env` file.
+To create new release:
+* Update version in `.env` file
+* Create MR and get it merged.
+* Create new Git Tag using same version.
+* Gitlab cicd pipeline defined in `gitlab-ci.yml` will do following
+   * Build and push image tags to prod and non prod ECR
+   * Update helm version in `helm-chrats` repository and create MR 
+* Approve and merge MR to `helm-charts`. 
+* Update relevant app in ArgoCD

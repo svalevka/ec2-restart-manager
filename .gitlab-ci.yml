@@ -1,0 +1,71 @@
+include:
+  # Include the ECR Deployment components
+  - project: laserdigital/engineering/sdlc/cicd-components
+    file:
+      - ECR.Deployment.gitlab-ci.yml
+    ref: v1.1.0
+
+variables:
+  # Extract the repository name from CI_PROJECT_NAME
+  # Or define it explicitly if needed
+  REPO_NAME: ${CI_PROJECT_NAME}
+  # Define the platform path - could also use other CI variables
+  PLATFORM_PATH: "platform"
+  # Combined path
+  ECR_REPO_NAME: "${PLATFORM_PATH}/${REPO_NAME}"
+  IMAGE_TAG: "$CI_COMMIT_TAG"
+
+# Define stages in your pipeline
+stages:
+  - deploy-image
+  - release
+
+# This pipeline only runs when tags are created
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+
+# Build and push to dev (always with :latest tag)
+publish-image-dev:
+  extends: .kaniko-publisher
+  stage: deploy-image
+  tags:
+    - shared-dev
+  variables:
+    ACCOUNT: "733930943835"
+    REGION: eu-west-2
+    IMAGE_TAG: "latest"
+  script:
+    - echo "Building image tagged latest (version ${CI_COMMIT_TAG}) for repository $ECR_REPO_NAME"
+    - build_and_push . Dockerfile ${ECR_REPO_NAME} --build-arg VERSION=${CI_COMMIT_TAG}
+
+# Build and push to prod (with git tag)
+publish-image-prod:
+  extends: .kaniko-publisher
+  stage: deploy-image
+  tags:
+    - shared-prod
+  variables:
+    ACCOUNT: "120161110524"
+    REGION: eu-west-2
+    IMAGE_TAG: $CI_COMMIT_TAG
+  script:
+    - echo "Building image tagged ${CI_COMMIT_TAG} for repository $ECR_REPO_NAME"
+    - build_and_push . Dockerfile ${ECR_REPO_NAME} --build-arg VERSION=${CI_COMMIT_TAG}
+
+# Release the image to the prod environment
+
+release:
+  stage: release
+  only:
+    - tags
+  variables:
+    HELM_CHART: platform/ec2-restart-manager
+    RELEASE_IMAGE: ec2-restart-manager
+    RELEASE_TAG: $CI_COMMIT_TAG
+  inherit:
+    variables: false
+  when: manual
+  trigger:
+    project: laserdigital/infrastructure/helm-charts
+    branch: v1.1.0

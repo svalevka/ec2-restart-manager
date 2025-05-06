@@ -5,6 +5,8 @@ import (
     "fmt"
     "log"
     "net/http"
+    "strconv"
+    "strings"
     "sync"
     "time"
     "html/template"
@@ -15,6 +17,120 @@ import (
     "ec2-restart-manager/config"
     "github.com/aws/aws-sdk-go-v2/service/ssm"
 )
+
+// Region to timezone mapping
+var regionTimezoneMap = map[string]string{
+    // UK
+    "eu-west-2": "Europe/London",
+    // Ireland
+    "eu-west-1": "Europe/Dublin",
+    // Frankfurt
+    "eu-central-1": "Europe/Berlin",
+    // Paris
+    "eu-west-3": "Europe/Paris",
+    // Stockholm
+    "eu-north-1": "Europe/Stockholm",
+    // Singapore
+    "ap-southeast-1": "Asia/Singapore",
+    // Hong Kong
+    "ap-east-1": "Asia/Hong_Kong",
+    // Dubai (Middle East)
+    "me-central-1": "Asia/Dubai",
+    // Tokyo
+    "ap-northeast-1": "Asia/Tokyo",
+    // US East (N. Virginia)
+    "us-east-1": "America/New_York",
+    // US East (Ohio)
+    "us-east-2": "America/New_York",
+    // US West (N. California)
+    "us-west-1": "America/Los_Angeles",
+    // US West (Oregon)
+    "us-west-2": "America/Los_Angeles",
+    // Default
+    "default": "UTC",
+}
+
+// Day mapping for converting weekday names to systemd day names
+var dayMap = map[string]string{
+    "Monday": "Mon",
+    "Tuesday": "Tue",
+    "Wednesday": "Wed",
+    "Thursday": "Thu",
+    "Friday": "Fri",
+    "Saturday": "Sat",
+    "Sunday": "Sun",
+}
+
+// getUTCTimeFromRegional converts a time in a regional timezone to UTC for systemd timer
+func getUTCTimeFromRegional(day string, timeStr string, regionTimezone string) (string, string, error) {
+    // Parse the time
+    timeParts := strings.Split(timeStr, ":")
+    if len(timeParts) != 2 {
+        return "", "", fmt.Errorf("invalid time format: %s", timeStr)
+    }
+    
+    hour, err := strconv.Atoi(timeParts[0])
+    if err != nil {
+        return "", "", fmt.Errorf("invalid hour: %s", timeParts[0])
+    }
+    
+    minute, err := strconv.Atoi(timeParts[1])
+    if err != nil {
+        return "", "", fmt.Errorf("invalid minute: %s", timeParts[1])
+    }
+    
+    // Find day number
+    dayNum := 0
+    switch day {
+    case "Monday":
+        dayNum = 1
+    case "Tuesday":
+        dayNum = 2
+    case "Wednesday":
+        dayNum = 3
+    case "Thursday":
+        dayNum = 4
+    case "Friday":
+        dayNum = 5
+    case "Saturday":
+        dayNum = 6
+    case "Sunday":
+        dayNum = 0
+    default:
+        return "", "", fmt.Errorf("invalid day: %s", day)
+    }
+    
+    // Create a time.Time for this week's instance of that day and time
+    now := time.Now()
+    // Find the most recent occurrence of the target day
+    daysToAdd := (7 + dayNum - int(now.Weekday())) % 7
+    targetDay := now.AddDate(0, 0, daysToAdd)
+    
+    // Create the time in the region's timezone
+    regionLoc, err := time.LoadLocation(regionTimezone)
+    if err != nil {
+        return "", "", fmt.Errorf("invalid region timezone: %s", regionTimezone)
+    }
+    
+    // Create time in the regional timezone
+    regionTime := time.Date(
+        targetDay.Year(), targetDay.Month(), targetDay.Day(),
+        hour, minute, 0, 0, regionLoc,
+    )
+    
+    // Convert to UTC for the systemd timer
+    utcTime := regionTime.UTC()
+    
+    // Extract the day of week and time in UTC
+    utcDay := dayMap[utcTime.Weekday().String()]
+    if utcDay == "" {
+        utcDay = utcTime.Weekday().String()[:3]
+    }
+    
+    utcTimeStr := fmt.Sprintf("%02d:%02d", utcTime.Hour(), utcTime.Minute())
+    
+    return utcDay, utcTimeStr, nil
+}
 
 var command_role_name = "ec2-restart-manager-restarter"
 
@@ -81,20 +197,64 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
             envClass := instance.EnvironmentClass
             
             if envClass == "stg" || envClass == "dev" {
-                // For staging/dev: Use configured day/time with reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
-                    baseCommand, 
+                // For staging/dev: Use systemd-run with configured day/time with reboot
+                // Get the instance's region and determine timezone
+                timezone := regionTimezoneMap[instance.Region]
+                if timezone == "" {
+                    timezone = regionTimezoneMap["default"] // Use UTC if region not found
+                }
+                
+                // Convert regional time to UTC for systemd timer
+                utcDay, utcTime, err := getUTCTimeFromRegional(
                     scheduleConfig.StgDevDay, 
-                    scheduleConfig.StgDevTime)
+                    scheduleConfig.StgDevTime, 
+                    timezone, // The regional timezone for this instance
+                )
+                if err != nil {
+                    log.Printf("Error converting timezone for instance %s in region %s: %v", instanceID, instance.Region, err)
+                    updateCommandStatus(instanceID, "Failed to convert timezone", "", "", "")
+                    continue
+                }
+                
+                // Format the systemd calendar specification with UTC time
+                systemdCalendar := fmt.Sprintf("%s %s", utcDay, utcTime)
+                
+                // We still use TZ for the script execution to ensure all log timestamps use regional time
+                command = fmt.Sprintf(`sudo systemd-run --on-calendar="%s" --unit=security-update-stgdev /bin/bash -c 'export TZ=%s; exec >> /var/log/patching.log 2>&1; echo ""; echo "=== NEW SECURITY UPDATE RUN: $(date) ==="; echo "SCHEDULED-UPDATE starting at $(date)"; SLEEP_TIME=$((RANDOM %% 1800)); echo "Will sleep for $SLEEP_TIME seconds and update at $(date -d "+$SLEEP_TIME seconds")"; sleep $SLEEP_TIME; echo "Starting security update at $(date)"; %s && echo "SCHEDULED-UPDATE completed at $(date), rebooting now" && sudo reboot'`,
+                    systemdCalendar,
+                    timezone,
+                    baseCommand)
                 commandName = fmt.Sprintf("Scheduled Security Patching (%s %s GMT with reboot)", 
                     scheduleConfig.StgDevDay, 
                     scheduleConfig.StgDevTime)
             } else if envClass == "prod" {
-                // For prod: Use configured day/time without reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
-                    baseCommand, 
+                // For prod: Use systemd-run with configured day/time without reboot
+                // Get the instance's region and determine timezone
+                timezone := regionTimezoneMap[instance.Region]
+                if timezone == "" {
+                    timezone = regionTimezoneMap["default"] // Use UTC if region not found
+                }
+                
+                // Convert regional time to UTC for systemd timer
+                utcDay, utcTime, err := getUTCTimeFromRegional(
                     scheduleConfig.ProdDay, 
-                    scheduleConfig.ProdTime)
+                    scheduleConfig.ProdTime, 
+                    timezone, // The regional timezone for this instance
+                )
+                if err != nil {
+                    log.Printf("Error converting timezone for instance %s in region %s: %v", instanceID, instance.Region, err)
+                    updateCommandStatus(instanceID, "Failed to convert timezone", "", "", "")
+                    continue
+                }
+                
+                // Format the systemd calendar specification with UTC time
+                systemdCalendar := fmt.Sprintf("%s %s", utcDay, utcTime)
+                
+                // We still use TZ for the script execution to ensure all log timestamps use regional time
+                command = fmt.Sprintf(`sudo systemd-run --on-calendar="%s" --unit=security-update-prod /bin/bash -c 'export TZ=%s; exec >> /var/log/patching.log 2>&1; echo ""; echo "=== NEW SECURITY UPDATE RUN: $(date) ==="; echo "SCHEDULED-UPDATE starting at $(date)"; SLEEP_TIME=$((RANDOM %% 1800)); echo "Will sleep for $SLEEP_TIME seconds and update at $(date -d "+$SLEEP_TIME seconds")"; sleep $SLEEP_TIME; echo "Starting security update at $(date)"; %s && echo "SCHEDULED-UPDATE completed at $(date)"'`,
+                    systemdCalendar,
+                    timezone,
+                    baseCommand)
                 commandName = fmt.Sprintf("Scheduled Security Patching (%s %s GMT)", 
                     scheduleConfig.ProdDay, 
                     scheduleConfig.ProdTime)
@@ -108,20 +268,64 @@ func CommandHandler(w http.ResponseWriter, r *http.Request) {
             envClass := instance.EnvironmentClass
             
             if envClass == "stg" || envClass == "dev" {
-                // For staging/dev: Use configured day/time with reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s && sudo reboot\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
-                    baseCommand, 
+                // For staging/dev: Use systemd-run with configured day/time with reboot
+                // Get the instance's region and determine timezone
+                timezone := regionTimezoneMap[instance.Region]
+                if timezone == "" {
+                    timezone = regionTimezoneMap["default"] // Use UTC if region not found
+                }
+                
+                // Convert regional time to UTC for systemd timer
+                utcDay, utcTime, err := getUTCTimeFromRegional(
                     scheduleConfig.StgDevDay, 
-                    scheduleConfig.StgDevTime)
+                    scheduleConfig.StgDevTime, 
+                    timezone, // The regional timezone for this instance
+                )
+                if err != nil {
+                    log.Printf("Error converting timezone for instance %s in region %s: %v", instanceID, instance.Region, err)
+                    updateCommandStatus(instanceID, "Failed to convert timezone", "", "", "")
+                    continue
+                }
+                
+                // Format the systemd calendar specification with UTC time
+                systemdCalendar := fmt.Sprintf("%s %s", utcDay, utcTime)
+                
+                // We still use TZ for the script execution to ensure all log timestamps use regional time
+                command = fmt.Sprintf(`sudo systemd-run --on-calendar="%s" --unit=upgrade-stgdev /bin/bash -c 'export TZ=%s; exec >> /var/log/patching.log 2>&1; echo ""; echo "=== NEW SYSTEM UPGRADE RUN: $(date) ==="; echo "SCHEDULED-UPDATE starting at $(date)"; SLEEP_TIME=$((RANDOM %% 1800)); echo "Will sleep for $SLEEP_TIME seconds and upgrade at $(date -d "+$SLEEP_TIME seconds")"; sleep $SLEEP_TIME; echo "Starting system upgrade at $(date)"; %s && echo "SCHEDULED-UPDATE completed at $(date), rebooting now" && sudo reboot'`,
+                    systemdCalendar,
+                    timezone,
+                    baseCommand)
                 commandName = fmt.Sprintf("Scheduled System Upgrade (%s %s GMT with reboot)", 
                     scheduleConfig.StgDevDay, 
                     scheduleConfig.StgDevTime)
             } else if envClass == "prod" {
-                // For prod: Use configured day/time without reboot
-                command = fmt.Sprintf("echo \"sleep $((RANDOM %% 1800)); %s\" | at -t $(date -d 'next %s %s GMT' +%%Y%%m%%d%%H%%M)", 
-                    baseCommand, 
+                // For prod: Use systemd-run with configured day/time without reboot
+                // Get the instance's region and determine timezone
+                timezone := regionTimezoneMap[instance.Region]
+                if timezone == "" {
+                    timezone = regionTimezoneMap["default"] // Use UTC if region not found
+                }
+                
+                // Convert regional time to UTC for systemd timer
+                utcDay, utcTime, err := getUTCTimeFromRegional(
                     scheduleConfig.ProdDay, 
-                    scheduleConfig.ProdTime)
+                    scheduleConfig.ProdTime, 
+                    timezone, // The regional timezone for this instance
+                )
+                if err != nil {
+                    log.Printf("Error converting timezone for instance %s in region %s: %v", instanceID, instance.Region, err)
+                    updateCommandStatus(instanceID, "Failed to convert timezone", "", "", "")
+                    continue
+                }
+                
+                // Format the systemd calendar specification with UTC time
+                systemdCalendar := fmt.Sprintf("%s %s", utcDay, utcTime)
+                
+                // We still use TZ for the script execution to ensure all log timestamps use regional time
+                command = fmt.Sprintf(`sudo systemd-run --on-calendar="%s" --unit=upgrade-prod /bin/bash -c 'export TZ=%s; exec >> /var/log/patching.log 2>&1; echo ""; echo "=== NEW SYSTEM UPGRADE RUN: $(date) ==="; echo "SCHEDULED-UPDATE starting at $(date)"; SLEEP_TIME=$((RANDOM %% 1800)); echo "Will sleep for $SLEEP_TIME seconds and upgrade at $(date -d "+$SLEEP_TIME seconds")"; sleep $SLEEP_TIME; echo "Starting system upgrade at $(date)"; %s && echo "SCHEDULED-UPDATE completed at $(date)"'`,
+                    systemdCalendar,
+                    timezone,
+                    baseCommand)
                 commandName = fmt.Sprintf("Scheduled System Upgrade (%s %s GMT)", 
                     scheduleConfig.ProdDay, 
                     scheduleConfig.ProdTime)
