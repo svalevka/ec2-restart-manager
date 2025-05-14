@@ -46,8 +46,9 @@ func LoadConfig() (*EnvConfig, error) {
 
 	// Determine the environment
 	env := os.Getenv("ENVIRONMENT")
+	fmt.Print("Found env var ENVIRONMENT: ", env)
 	if env == "" {
-		env = "test" // Default to 'test' if ENVIRONMENT is not set
+		env = "prod" // Default to 'prod' if ENVIRONMENT is not set
 	}
 
 	// Retrieve the configuration for the specified environment
